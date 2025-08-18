@@ -31,8 +31,8 @@
 1. 저장소 클론
 
    ```bash
-   git clone https://github.com/eschoeDeveloper/reactive_chatbot_api.git
-   cd reactive_chatbot_api
+   git clone https://github.com/eschoeDeveloper/llm-rag-api.git
+   cd llm-rag-api
    ```
 
 2. 빌드 및 실행
