@@ -49,7 +49,7 @@ public class WebFluxConfig {
     public WebClient webClient(WebClient.Builder builder) {
         return builder
                 .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
-                        .responseTimeout(Duration.ofSeconds(30))
+                        .responseTimeout(Duration.ofSeconds(8000))
                         .followRedirect(true)
                 ))
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10*1024*1024))

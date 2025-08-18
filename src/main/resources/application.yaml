@@ -5,12 +5,17 @@ server:
 spring:
   application:
     name: reactive_chatbot
-  webflux:
-    base-path: /api
   r2dbc:
-    url: r2dbc:postgresql://localhost:45432/chatbot_db
-    username: postgres
-    password: "!@#mkd2ke91"
+    url: r2dbc:postgresql://127.0.0.1:45432/postgres
+    username: "postgres"
+    password: "!@#mkd2ek91"
+    pool:
+      max-idle-time: 30m
+      max-acquire-time: 30m
+      initial-size: 0
+      max-size: 1000
+      max-life-time: 30m
+      enabled: true
   jackson:
     default-property-inclusion: non_null
     deserialization:
@@ -18,6 +23,11 @@ spring:
   http:
     codecs:
       max-in-memory-size: 100MB
+  ai:
+    openai:
+      api-key: ${OPEN_AI_KEY}
+    anthropic:
+      api-key:
 
 management:
   endpoints:
@@ -31,9 +41,9 @@ management:
 
 logging:
   level:
-    org.springframework.r2dbc: INFO
-    io.r2dbc.postgresql: INFO
-    org.springframework.web: INFO
+    org.springframework.r2dbc: TRACE
+    io.r2dbc.postgresql: TRACE
+    org.springframework.web: TRACE
 
 app:
   cors:
