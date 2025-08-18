@@ -6,7 +6,7 @@ plugins {
 
 group = 'io.github.eschoe'
 version = '0.0.1-SNAPSHOT'
-description = 'reactive_chatbot'
+description = 'LLM-RAG-API'
 
 java {
     toolchain {
