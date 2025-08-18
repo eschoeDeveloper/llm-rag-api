@@ -1,15 +1,16 @@
-# ⚡ reactive-chatbot-api
+# ⚡ LLM-RAG-API
 
 ---
 ## 📖 프로젝트 개요
 
-**reactive-chatbot-api** 는 spring 기반의 reactive api ( WebFlux )를 이해하기 위한 예제 프로젝트로서 h2 데이터베이스 기반 실 데이터를 활용하여 Service 로직에 대한 행위 테스트를 진행합니다.
+**LLM-RAG-API** 는 spring 기반의 LLM + RAG를 이해하기 위한 예제 프로젝트로서 PgVector를 활용하며 LLM과 RAG의 기초 개념을 학습하는데 초점을 맞춰 진행하였습니다.
 
 ---
 
 ## 🛠 주요 로직
 
-
+1. Top-K 유사도 검색
+2. OpenAI LLM 활용
 
 ---
 
@@ -19,7 +20,9 @@
 
 * **언어 & 프레임워크:** Java 23, Spring Boot 3
 * **API 문서화:** SpringDoc OpenAPI
-* **인증/인가:** Spring Security, JWT
+* **데이터베이스**: PostgreSQL 17
+* **LLM+RAG**: pgVector, OpenAI Client
+* **인증/인가:** Spring Security
 
 ---
 
@@ -28,8 +31,8 @@
 1. 저장소 클론
 
    ```bash
-   git clone https://github.com/eschoeDeveloper/reactive_chatbot_api.git
-   cd reactive_chatbot_api
+   git clone https://github.com/eschoeDeveloper/llm_rag_api.git
+   cd llm_rag_api
    ```
 
 2. API 문서 확인
@@ -43,7 +46,7 @@
 ## 📂 프로젝트 구조
 
 ```
-├── src/main/java/io/github/eschoe/reactive_chatbot
+├── src/main/java/io/github/eschoe/llm_rag_api
 │   ├── config       # Config 클래스
 │   └── 
 ├── src/main/resources
@@ -54,7 +57,7 @@
 
 ## 🤝 연락처
 
-* **GitHub:** [github.com/eschoeDeveloper/reactive_chatbot_api](https://github.com/eschoeDeveloper/reactive_chatbot_api)
+* **GitHub:** [github.com/eschoeDeveloper/llm_rag_api](https://github.com/eschoeDeveloper/llm_rag_api)
 * **Email:** [develop.eschoe@gmail.com](mailto:develop.eschoe@gmail.com)
 
 ---
