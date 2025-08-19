@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT -Dspring.profiles.active=production $JAVA_OPTS -jar "target/llm-rag-api.jar"
+web: java -Dserver.port=$PORT $JAVA_OPTS -jar ./build/libs/llm-rag-api-0.0.1-SNAPSHOT.jar
