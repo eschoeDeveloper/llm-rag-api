@@ -18,6 +18,13 @@ repositories {
     mavenCentral()
 }
 
+bootJar{
+    destinationDirectory = file("./target") //gradle build 시 jar 파일이 생성되는 파일명 및 위치를 설정한다.
+    archivesBaseName = 'llm-rag-api'   //프로젝트이름
+    archiveFileName = 'llm-rag-api.jar' //jar파일명
+    archiveVersion = "0.0.1"
+}
+
 ext {
     set('springAiVersion', "1.0.1")
 }
