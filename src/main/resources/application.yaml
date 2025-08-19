@@ -1,14 +1,15 @@
 server:
   port: 8080
   shutdown: graceful
+  max-http-request-header-size: 8KB
 
 spring:
   application:
-    name: reactive_chatbot
+    name: llm-rag-api
   r2dbc:
-    url: r2dbc:postgresql://127.0.0.1:45432/postgres
-    username: "postgres"
-    password: "!@#mkd2ek91"
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     pool:
       max-idle-time: 30m
       max-acquire-time: 30m
@@ -22,12 +23,16 @@ spring:
       fail-on-unknown-properties: false
   http:
     codecs:
-      max-in-memory-size: 100MB
+      max-in-memory-size: 2MB
   ai:
     openai:
       api-key: ${OPEN_AI_KEY}
     anthropic:
       api-key:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 management:
   endpoints:
@@ -47,7 +52,7 @@ logging:
 
 app:
   cors:
-    allowed-origins: "http://localhost:5173,http://localhost:3000"
-    allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
-    allowed-headers: "*"
+    allowed-origins: ${ALLOW_ORIGINS}
+    allowed-methods: ${ALLOW_METHODS}
+    allowed-headers: ${ALLOW_HEADERS}
     allowed-credentials: true
