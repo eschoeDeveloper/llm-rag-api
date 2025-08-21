@@ -46,9 +46,9 @@ management:
 
 logging:
   level:
-    org.springframework.r2dbc: TRACE
-    io.r2dbc.postgresql: TRACE
-    org.springframework.web: TRACE
+    org.springframework.r2dbc: INFO
+    io.r2dbc.postgresql: INFO
+    org.springframework.web: INFO
 
 app:
   cors:
