@@ -27,8 +27,8 @@ public class EmbeddingQueryDao {
                 """;
 
         return dbClient.sql(sql)
-                .bind(1, q)
-                .bind(2, k)
+                .bind(0, q)
+                .bind(1, k)
                 .map((row, meta) -> {
                     EmbeddingRow r = new EmbeddingRow();
                     r.setId(row.get("id", Long.class));
