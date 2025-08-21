@@ -22,8 +22,8 @@ public class EmbeddingQueryDao {
         String sql = """
                     SELECT id,  title, content, created_at
                     FROM chatbot.embeddings
-                    ORDER BY embedding <=> $1::vector
-                    LIMIT $2::int
+                    ORDER BY cosine_distance(embedding, $1::vector)
+                    LIMIT $2
                 """;
 
         return dbClient.sql(sql)
