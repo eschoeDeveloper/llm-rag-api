@@ -18,7 +18,7 @@ public class SearchRouter {
     @Bean
     RouterFunction<ServerResponse> searchRouterFunction() {
         return RouterFunctions.route()
-                .POST("/api/embeddings/search", handler::search)
+                .POST("/api/embeddings/search", handler::searchHandler)
                 .build();
     }
 
