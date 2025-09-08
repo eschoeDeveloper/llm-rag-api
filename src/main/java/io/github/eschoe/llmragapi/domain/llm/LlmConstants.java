@@ -1,4 +1,4 @@
-package io.github.eschoe.llmragapi.domain;
+package io.github.eschoe.llmragapi.domain.llm;
 
 public final class LlmConstants {
     public static final String DEFAULT_PROVIDER = "openai";

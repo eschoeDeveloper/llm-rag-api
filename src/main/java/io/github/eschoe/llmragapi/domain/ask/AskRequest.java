@@ -1,31 +1,21 @@
 package io.github.eschoe.llmragapi.domain.ask;
 
-public class AskRequest {
+import io.github.eschoe.llmragapi.domain.rag.RAGConfig;
 
+public class AskRequest {
     private String query;
-    private float[] embedding;
+    private RAGConfig config;
 
     public AskRequest() {}
 
-    public AskRequest(String query, float[] embedding) {
+    public AskRequest(String query, RAGConfig config) {
         this.query = query;
-        this.embedding = embedding;
+        this.config = config;
     }
 
-    public String getQuery() {
-        return query;
-    }
+    public String getQuery() { return query; }
+    public void setQuery(String query) { this.query = query; }
 
-    public void setQuery(String query) {
-        this.query = query;
-    }
-
-    public float[] getEmbedding() {
-        return embedding;
-    }
-
-    public void setEmbedding(float[] embedding) {
-        this.embedding = embedding;
-    }
-
+    public RAGConfig getConfig() { return config; }
+    public void setConfig(RAGConfig config) { this.config = config; }
 }

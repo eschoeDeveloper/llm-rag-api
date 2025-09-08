@@ -20,20 +20,21 @@ public class EmbeddingQueryDao {
     public Flux<EmbeddingRow> topKByCosine(float[] q, int k) {
 
         String sql = """
-                    SELECT id,  title, content, created_at
+                    SELECT id,  title, content, (1 - cosine_distance(embedding, :queryVector::vector)) as score, created_at
                     FROM chatbot.embeddings
-                    ORDER BY cosine_distance(embedding, $1::vector)
-                    LIMIT $2
+                    ORDER BY cosine_distance(embedding, :queryVector::vector)
+                    LIMIT :limit
                 """;
 
         return dbClient.sql(sql)
-                .bind(0, q)
-                .bind(1, k)
+                .bind("queryVector", q)
+                .bind("limit", k)
                 .map((row, meta) -> {
                     EmbeddingRow r = new EmbeddingRow();
                     r.setId(row.get("id", Long.class));
                     r.setTitle(row.get("title", String.class));
                     r.setContent(row.get("content", String.class));
+                    r.setScore(row.get("score", Double.class));
                     r.setCreatedAt(row.get("created_at", OffsetDateTime.class));
                     return r;
                 })
