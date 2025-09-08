@@ -4,6 +4,8 @@ import reactor.core.publisher.Mono;
 
 public interface AskService {
 
-    Mono<String> ask(AskBody ask);
+    Mono<String> askLegacy(AskBody ask);
+
+    Mono<AskResponse> askEnhanced(AskRequest ask);
 
 }

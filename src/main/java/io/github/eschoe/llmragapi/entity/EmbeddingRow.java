@@ -15,6 +15,10 @@ public class EmbeddingRow {
     private String content;
     // r2dbc는 배열/json 변환 허용 -> 간단한 float[]으로 관리
     private Float[] embedding;
+
+    // 벡터 검색 결과의 유사도 점수 (쿼리 시에만 사용)
+    private Double score;
+
     @Column("created_at")
     private OffsetDateTime createdAt;
 
@@ -40,6 +44,14 @@ public class EmbeddingRow {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
     }
 
     public Float[] getEmbedding() {

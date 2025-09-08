@@ -3,7 +3,7 @@ package io.github.eschoe.llmragapi.util;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ChatbotUtil {
+public class LlmRagUtil {
 
     public static String opt(String s) { return s == null ? "" : s.trim(); }
 
