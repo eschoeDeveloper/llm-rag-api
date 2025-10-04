@@ -10,10 +10,9 @@ import reactor.core.publisher.Mono;
 @Component
 public class RedisHealthIndicator implements HealthIndicator {
 
-    @Qualifier("redisWriterFactory")
     private final ReactiveRedisConnectionFactory redisConnectionFactory;
 
-    public RedisHealthIndicator(ReactiveRedisConnectionFactory redisConnectionFactory) {
+    public RedisHealthIndicator(@Qualifier("redisWriterFactory") ReactiveRedisConnectionFactory redisConnectionFactory) {
         this.redisConnectionFactory = redisConnectionFactory;
     }
 
