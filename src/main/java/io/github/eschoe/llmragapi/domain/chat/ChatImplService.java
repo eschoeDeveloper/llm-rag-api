@@ -2,8 +2,11 @@ package io.github.eschoe.llmragapi.domain.chat;
 
 import io.github.eschoe.llmragapi.client.LlmContextClient;
 import io.github.eschoe.llmragapi.dao.EmbeddingQueryDao;
+import io.github.eschoe.llmragapi.domain.history.ChatHistoryStore;
+import io.github.eschoe.llmragapi.domain.llm.LlmCacheService;
 import io.github.eschoe.llmragapi.domain.llm.LlmConstants;
 import io.github.eschoe.llmragapi.domain.search.SearchResult;
+import io.github.eschoe.llmragapi.util.HashUtil;
 import io.github.eschoe.llmragapi.util.LlmRagUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,14 +25,20 @@ public class ChatImplService implements ChatService {
     @Value("${APP_EMBEDDING_MODEL:text-embedding-3-small}")
     private String embeddingModel;
 
+    private final LlmCacheService cache;
+    private final HashUtil hash;
     private final LlmRagUtil llmRagUtil;
     private final LlmContextClient llmContextClient;
     private final EmbeddingQueryDao embeddingQueryDao;
+    private final ChatHistoryStore chatHistoryStore;
 
-    public ChatImplService(LlmRagUtil llmRagUtil, LlmContextClient llmContextClient, EmbeddingQueryDao embeddingQueryDao) {
+    public ChatImplService(LlmCacheService cache, HashUtil hash, LlmRagUtil llmRagUtil, LlmContextClient llmContextClient, EmbeddingQueryDao embeddingQueryDao, ChatHistoryStore chatHistoryStore) {
+        this.cache = cache;
+        this.hash = hash;
         this.llmRagUtil = llmRagUtil;
         this.llmContextClient = llmContextClient;
         this.embeddingQueryDao = embeddingQueryDao;
+        this.chatHistoryStore = chatHistoryStore;
     }
 
     // 기존 메서드 (그대로 유지)
@@ -64,76 +73,203 @@ public class ChatImplService implements ChatService {
 
     // 새로운 메서드 추가
     // 새로운 메서드 추가
+//    public Mono<ChatResponse> chatEnhanced(ChatRequest request) {
+//        Instant startTime = Instant.now();
+//
+//        String llmQuery = llmRagUtil.opt(request.getQuery());
+//        String llmProvider = LlmConstants.DEFAULT_PROVIDER;
+//        String llmModel = llmRagUtil.chooseModel(llmProvider, null);
+//
+//        if (llmQuery.isBlank()) return Mono.error(new IllegalArgumentException("query is required"));
+//
+//        // 검색 결과가 있으면 활용, 없으면 새로 검색
+//        Mono<List<SearchResult>> searchResultsMono;
+//        if (request.getSearchResults() != null && !request.getSearchResults().isEmpty()) {
+//            searchResultsMono = Mono.just(request.getSearchResults());
+//        } else {
+//            // 벡터 검색 수행
+//            int k = request.getConfig() != null ? request.getConfig().getTopK() : 5;
+//            double threshold = request.getConfig() != null ? request.getConfig().getThreshold() : 0.7;
+//
+//            searchResultsMono = llmContextClient.embed(embeddingModel, llmQuery)
+//                    .flatMapMany(embed -> embeddingQueryDao.topKByCosine(embed, k))
+//                    .collectList()
+//                    .map(embedRows -> embedRows.stream()
+//                            .filter(row -> row.getScore() != null && row.getScore() >= threshold) // 임계값 필터링
+//                            .map(row -> new SearchResult(
+//                                    String.valueOf(row.getId()),
+//                                    row.getContent(),
+//                                    row.getScore() != null ? row.getScore() : 0.0,
+//                                    Map.of(
+//                                            "title", row.getTitle() != null ? row.getTitle() : "",
+//                                            "createdAt", row.getCreatedAt() != null ? row.getCreatedAt().toString() : ""
+//                                    ),
+//                                    "database"
+//                            ))
+//                            .collect(Collectors.toList()));
+//        }
+//
+//        return searchResultsMono
+//                .flatMap(searchResults -> {
+//                    // 컨텍스트 구성 (점수 정보 포함)
+//                    String _context = searchResults.stream()
+//                            .map(result -> String.format("- %s (점수: %.3f)",
+//                                    llmRagUtil.safeSnippet(result.getContent()),
+//                                    result.getScore()))
+//                            .collect(Collectors.joining("\n"));
+//
+//                    String systemPrompt = LlmConstants.SYSTEM_PROMPT;
+//                    String userPrompt = "QUESTION:\n" + llmQuery + "\n\nCONTEXT:\n" + _context;
+//
+//                    return llmContextClient.chat(llmProvider, llmModel, systemPrompt, userPrompt)
+//                            .map(response -> {
+//                                Instant endTime = Instant.now();
+//                                Duration processingTime = Duration.between(startTime, endTime);
+//
+//                                return new ChatResponse(
+//                                        response,
+//                                        llmModel,
+//                                        0, // LlmContextClient에서 토큰 정보를 제공하지 않으면 0
+//                                        Map.of(
+//                                                "processingTime", processingTime.toMillis(),
+//                                                "config", request.getConfig(),
+//                                                "searchResults", searchResults.size(),
+//                                                "averageScore", searchResults.stream()
+//                                                        .mapToDouble(SearchResult::getScore)
+//                                                        .average()
+//                                                        .orElse(0.0),
+//                                                "timestamp", endTime,
+//                                                "provider", llmProvider
+//                                        )
+//                                );
+//                            });
+//                });
+//    }
+
+
+    @Override
     public Mono<ChatResponse> chatEnhanced(ChatRequest request) {
+
         Instant startTime = Instant.now();
 
-        String llmQuery = llmRagUtil.opt(request.getQuery());
+        String llmQuery = LlmRagUtil.opt(request.getQuery());
+        if(llmQuery.isBlank()) return Mono.error(new IllegalArgumentException("query is required"));
+
         String llmProvider = LlmConstants.DEFAULT_PROVIDER;
-        String llmModel = llmRagUtil.chooseModel(llmProvider, null);
+        String llmModel = LlmRagUtil.chooseModel(llmProvider, null);
 
-        if (llmQuery.isBlank()) return Mono.error(new IllegalArgumentException("query is required"));
+        int k = (request.getConfig() != null && request.getConfig().getTopK() > 0)
+                ? request.getConfig().getTopK() : 5;
 
-        // 검색 결과가 있으면 활용, 없으면 새로 검색
+        double threshold = (request.getConfig() != null && request.getConfig().getThreshold() > 0)
+                ? request.getConfig().getThreshold() : 0.7;
+
+        final String ctxVersion = "ctx-v1";           // 프롬프트 스키마 버전
+        final String partitionId = "global";            // 고정 파티션 키
+        
+        // 세션 ID 처리 (없으면 기본값 사용)
+        String sessionId = request.getSessionId() != null ? request.getSessionId() : "default-session";
+
+        // ---- 검색 결과 준비 (있으면 사용, 없으면 임베딩→TopK) ----
         Mono<List<SearchResult>> searchResultsMono;
+
         if (request.getSearchResults() != null && !request.getSearchResults().isEmpty()) {
             searchResultsMono = Mono.just(request.getSearchResults());
         } else {
-            // 벡터 검색 수행
-            int k = request.getConfig() != null ? request.getConfig().getTopK() : 5;
-            double threshold = request.getConfig() != null ? request.getConfig().getThreshold() : 0.7;
 
             searchResultsMono = llmContextClient.embed(embeddingModel, llmQuery)
                     .flatMapMany(embed -> embeddingQueryDao.topKByCosine(embed, k))
                     .collectList()
-                    .map(embedRows -> embedRows.stream()
-                            .filter(row -> row.getScore() != null && row.getScore() >= threshold) // 임계값 필터링
-                            .map(row -> new SearchResult(
-                                    String.valueOf(row.getId()),
-                                    row.getContent(),
-                                    row.getScore() != null ? row.getScore() : 0.0,
+                    .map(rows -> rows.stream()
+                            .filter(r -> r.getScore() != null && r.getScore() >= threshold)
+                            .map(r -> new SearchResult(
+                                    String.valueOf(r.getId()),
+                                    r.getContent(),
+                                    r.getScore() != null ? r.getScore() : 0.0,
                                     Map.of(
-                                            "title", row.getTitle() != null ? row.getTitle() : "",
-                                            "createdAt", row.getCreatedAt() != null ? row.getCreatedAt().toString() : ""
+                                            "title", r.getTitle() != null ? r.getTitle() : "",
+                                            "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : ""
                                     ),
-                                    "database"
-                            ))
+                                    "database"))
                             .collect(Collectors.toList()));
         }
 
-        return searchResultsMono
-                .flatMap(searchResults -> {
-                    // 컨텍스트 구성 (점수 정보 포함)
-                    String _context = searchResults.stream()
-                            .map(result -> String.format("- %s (점수: %.3f)",
-                                    llmRagUtil.safeSnippet(result.getContent()),
-                                    result.getScore()))
-                            .collect(Collectors.joining("\n"));
+        return searchResultsMono.flatMap(searchResults -> {
 
-                    String systemPrompt = LlmConstants.SYSTEM_PROMPT;
-                    String userPrompt = "QUESTION:\n" + llmQuery + "\n\nCONTEXT:\n" + _context;
+            String contextBlock = searchResults.isEmpty()
+                    ? "- (관련 컨텍스트를 찾지 못했습니다. 일반 지식으로만 답변하세요.)"
+                    : searchResults.stream()
+                    .map(r -> String.format("- %s (점수: %.3f)",
+                            llmRagUtil.safeSnippet(r.getContent()), r.getScore()))
+                    .collect(Collectors.joining("\n"));
 
-                    return llmContextClient.chat(llmProvider, llmModel, systemPrompt, userPrompt)
-                            .map(response -> {
-                                Instant endTime = Instant.now();
-                                Duration processingTime = Duration.between(startTime, endTime);
+            // 이전 대화 히스토리 가져오기 (최근 10개)
+            return chatHistoryStore.recent(sessionId, 10)
+                    .collectList()
+                    .flatMap(historyMessages -> {
+                        
+                        // 대화 히스토리를 프롬프트에 포함
+                        String conversationContext = "";
+                        if (!historyMessages.isEmpty()) {
+                            conversationContext = "\n\nPREVIOUS CONVERSATION:\n" + 
+                                historyMessages.stream()
+                                    .collect(Collectors.joining("\n"));
+                        }
 
-                                return new ChatResponse(
-                                        response,
+                        String systemPrompt = LlmConstants.SYSTEM_PROMPT;
+                        String userPrompt = "QUESTION:\n" + llmQuery + "\n\nCONTEXT:\n" + contextBlock + conversationContext;
+
+            String ctxHash = hash.sha256(ctxVersion, systemPrompt, userPrompt);
+
+            // 1) 프롬프트 캐시 (기존 메서드 그대로 사용)
+            Mono<String> promptMono = cache.getOrBuildPrompt(
+                    partitionId,                          // ← 항상 "global"
+                    ctxHash,
+                    () -> Mono.just(toPromptJson(systemPrompt, userPrompt))
+            );
+
+            // 2) 응답 캐시 + 락 (기존 메서드 그대로 사용)
+            String inputHash = hash.sha256(llmModel, llmProvider, ctxVersion, systemPrompt, userPrompt);
+            Mono<String> answerMono = cache.getOrInvoke(
+                    llmModel,
+                    inputHash,
+                    () -> llmContextClient.chat(llmProvider, llmModel, systemPrompt, userPrompt)
+            );
+
+            return promptMono.then(answerMono)
+                    .flatMap(answer -> {
+                        // 대화 히스토리에 저장 (질문과 답변을 JSON 형태로)
+                        String questionJson = String.format("{\"role\":\"user\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
+                                llmQuery.replace("\"", "\\\""), Instant.now());
+                        String answerJson = String.format("{\"role\":\"assistant\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
+                                answer.replace("\"", "\\\""), Instant.now());
+                        
+                        return chatHistoryStore.append(sessionId, questionJson)
+                                .then(chatHistoryStore.append(sessionId, answerJson))
+                                .thenReturn(new ChatResponse(
+                                        answer,
                                         llmModel,
-                                        0, // LlmContextClient에서 토큰 정보를 제공하지 않으면 0
+                                        0,
                                         Map.of(
-                                                "processingTime", processingTime.toMillis(),
+                                                "processingTime", Duration.between(startTime, Instant.now()).toMillis(),
                                                 "config", request.getConfig(),
                                                 "searchResults", searchResults.size(),
-                                                "averageScore", searchResults.stream()
-                                                        .mapToDouble(SearchResult::getScore)
-                                                        .average()
-                                                        .orElse(0.0),
-                                                "timestamp", endTime,
-                                                "provider", llmProvider
+                                                "averageScore", searchResults.stream().mapToDouble(SearchResult::getScore).average().orElse(0.0),
+                                                "timestamp", Instant.now(),
+                                                "provider", llmProvider,
+                                                "sessionId", sessionId
                                         )
-                                );
-                            });
-                });
+                                ));
+                    });
+
+                    });
+
     }
+
+    private String toPromptJson(String systemPrompt, String userPrompt) {
+        return "{\"system\":" + quote(systemPrompt) + ",\"user\":" + quote(userPrompt) + "}";
+    }
+
+    private String quote(String s) { return "\"" + s.replace("\"","\\\"") + "\""; }
+
 }

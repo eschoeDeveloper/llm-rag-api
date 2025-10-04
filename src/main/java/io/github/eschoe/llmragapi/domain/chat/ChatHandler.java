@@ -2,6 +2,7 @@ package io.github.eschoe.llmragapi.domain.chat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.eschoe.llmragapi.global.ErrorResponse;
+import io.github.eschoe.llmragapi.util.SessionUtil;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -15,10 +16,12 @@ public class ChatHandler {
 
     private final ChatService chatService;
     private final ObjectMapper objectMapper;
+    private final SessionUtil sessionUtil;
 
-    public ChatHandler(ChatService chatService, ObjectMapper objectMapper) {
+    public ChatHandler(ChatService chatService, ObjectMapper objectMapper, SessionUtil sessionUtil) {
         this.chatService = chatService;
         this.objectMapper = objectMapper;
+        this.sessionUtil = sessionUtil;
     }
 
     public Mono<ServerResponse> chat(ServerRequest req) {
@@ -28,11 +31,19 @@ public class ChatHandler {
                         // JSON 파싱 시도
                         ChatRequest chatRequest = objectMapper.readValue(body, ChatRequest.class);
 
+                        // 세션 ID 추출 및 설정
+                        String sessionId = sessionUtil.extractSessionId(req);
+                        if (chatRequest.getSessionId() != null && sessionUtil.isValidSessionId(chatRequest.getSessionId())) {
+                            sessionId = chatRequest.getSessionId();
+                        }
+                        chatRequest.setSessionId(sessionId);
+
                         // 새로운 방식인지 확인 (config가 있으면 새로운 방식)
                         if (chatRequest.getConfig() != null) {
                             return chatService.chatEnhanced(chatRequest)
                                     .flatMap(response -> ServerResponse.ok()
                                             .contentType(MediaType.APPLICATION_JSON)
+                                            .header("X-Session-ID", sessionId)  // 세션 ID를 응답 헤더에 포함
                                             .bodyValue(response));
                         }
                     } catch (Exception e) {
