@@ -71,13 +71,13 @@ public class SimpleRedisConfig {
     }
 
     @Primary
-    @Bean
+    @Bean("simpleReactiveStringRedisTemplate")
     public ReactiveStringRedisTemplate reactiveStringRedisTemplate(
             @Qualifier("simpleRedisConnectionFactory") ReactiveRedisConnectionFactory connectionFactory) {
         return new ReactiveStringRedisTemplate(connectionFactory);
     }
 
-    @Bean
+    @Bean("simpleReactiveRedisTemplate")
     public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(
             @Qualifier("simpleRedisConnectionFactory") ReactiveRedisConnectionFactory connectionFactory) {
         return new ReactiveRedisTemplate<>(connectionFactory, RedisSerializationContext.string());
