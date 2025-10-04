@@ -45,8 +45,8 @@ spring:
         port: ${REDIS_READER_PORT}
         username: default
         password: ${REDIS_READER_PASSWORD}
-      connect-timeout: 1000
-      command-timeout: 1000
+      connect-timeout: 10
+      command-timeout: 10
 
 
 management:
