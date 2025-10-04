@@ -35,9 +35,9 @@ public class SessionUtil {
         }
 
         // 2. 쿠키에서 세션 ID 추출
-        sessionId = request.cookies().getFirst("SESSION_ID");
-        if (isValidSessionId(sessionId)) {
-            return sessionId;
+        var sessionCookie = request.cookies().getFirst("SESSION_ID");
+        if (sessionCookie != null && isValidSessionId(sessionCookie.getValue())) {
+            return sessionCookie.getValue();
         }
 
         // 3. 새 세션 ID 생성

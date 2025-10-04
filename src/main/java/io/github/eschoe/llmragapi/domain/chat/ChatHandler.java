@@ -28,23 +28,26 @@ public class ChatHandler {
     public Mono<ServerResponse> chat(ServerRequest req) {
         return req.bodyToMono(String.class)
                 .flatMap(body -> {
+                    // 세션 ID 추출 (전체 메서드에서 사용)
+                    final String sessionId = sessionUtil.extractSessionId(req);
+                    
                     try {
                         // JSON 파싱 시도
                         ChatRequest chatRequest = objectMapper.readValue(body, ChatRequest.class);
 
-                        // 세션 ID 추출 및 설정
-                        String sessionId = sessionUtil.extractSessionId(req);
+                        // 세션 ID 설정
                         if (chatRequest.getSessionId() != null && sessionUtil.isValidSessionId(chatRequest.getSessionId())) {
-                            sessionId = chatRequest.getSessionId();
+                            chatRequest.setSessionId(chatRequest.getSessionId());
+                        } else {
+                            chatRequest.setSessionId(sessionId);
                         }
-                        chatRequest.setSessionId(sessionId);
 
                         // 새로운 방식인지 확인 (config가 있으면 새로운 방식)
                         if (chatRequest.getConfig() != null) {
                             return chatService.chatEnhanced(chatRequest)
                                     .flatMap(response -> ServerResponse.ok()
                                             .contentType(MediaType.APPLICATION_JSON)
-                                            .header("X-Session-ID", sessionId)  // 세션 ID를 응답 헤더에 포함
+                                            .header("X-Session-ID", chatRequest.getSessionId())  // 세션 ID를 응답 헤더에 포함
                                             .bodyValue(response));
                         }
                     } catch (Exception e) {
@@ -53,9 +56,6 @@ public class ChatHandler {
                     try {
                         // 기존 방식으로 파싱 시도
                         ChatBody chatBody = objectMapper.readValue(body, ChatBody.class);
-                        
-                        // 기존 방식에도 세션 ID 추출 및 설정
-                        String sessionId = sessionUtil.extractSessionId(req);
                         
                         // ChatBody를 ChatRequest로 변환하여 컨텍스트 유지 기능 사용
                         ChatRequest chatRequest = new ChatRequest();
