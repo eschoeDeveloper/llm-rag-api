@@ -21,7 +21,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
 
-// @Configuration  // 단순한 Redis 설정을 위해 비활성화
+@Configuration  // 단순한 Redis 설정을 위해 비활성화
 public class ReactiveRedisConfig {
 
     // ===== Writer (MASTER) =====
