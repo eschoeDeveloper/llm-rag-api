@@ -2,6 +2,7 @@ package io.github.eschoe.llmragapi.config;
 
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SocketOptions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,7 +34,7 @@ public class SimpleRedisConfig {
     private String writerPassword;
 
     @Primary
-    @Bean
+    @Bean("simpleRedisConnectionFactory")
     public LettuceConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config;
         
@@ -72,13 +73,13 @@ public class SimpleRedisConfig {
     @Primary
     @Bean
     public ReactiveStringRedisTemplate reactiveStringRedisTemplate(
-            ReactiveRedisConnectionFactory connectionFactory) {
+            @Qualifier("simpleRedisConnectionFactory") ReactiveRedisConnectionFactory connectionFactory) {
         return new ReactiveStringRedisTemplate(connectionFactory);
     }
 
     @Bean
     public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(
-            ReactiveRedisConnectionFactory connectionFactory) {
+            @Qualifier("simpleRedisConnectionFactory") ReactiveRedisConnectionFactory connectionFactory) {
         return new ReactiveRedisTemplate<>(connectionFactory, RedisSerializationContext.string());
     }
 
