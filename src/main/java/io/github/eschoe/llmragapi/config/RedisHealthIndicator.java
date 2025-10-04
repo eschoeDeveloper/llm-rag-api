@@ -1,5 +1,6 @@
 package io.github.eschoe.llmragapi.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
@@ -9,6 +10,7 @@ import reactor.core.publisher.Mono;
 @Component
 public class RedisHealthIndicator implements HealthIndicator {
 
+    @Qualifier("redisWriterFactory")
     private final ReactiveRedisConnectionFactory redisConnectionFactory;
 
     public RedisHealthIndicator(ReactiveRedisConnectionFactory redisConnectionFactory) {

@@ -127,6 +127,7 @@ public class ReactiveRedisConfig {
     }
 
     // 필요 시 제네릭 템플릿도 제공
+    @Primary
     @Bean("redisWriterJsonTemplate")
     public ReactiveRedisTemplate<String, String> redisWriterJsonTemplate(
             @Qualifier("redisWriterFactory") LettuceConnectionFactory f) {
