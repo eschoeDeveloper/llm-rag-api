@@ -1,6 +1,7 @@
 package io.github.eschoe.llmragapi.domain.chat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.eschoe.llmragapi.domain.rag.RAGConfig;
 import io.github.eschoe.llmragapi.global.ErrorResponse;
 import io.github.eschoe.llmragapi.util.SessionUtil;
 import org.springframework.http.MediaType;
@@ -52,10 +53,25 @@ public class ChatHandler {
                     try {
                         // 기존 방식으로 파싱 시도
                         ChatBody chatBody = objectMapper.readValue(body, ChatBody.class);
-                        return chatService.chatLegacy(chatBody)
-                                .flatMap(txt -> ServerResponse.ok()
-                                        .contentType(MediaType.TEXT_PLAIN)
-                                        .bodyValue(txt));
+                        
+                        // 기존 방식에도 세션 ID 추출 및 설정
+                        String sessionId = sessionUtil.extractSessionId(req);
+                        
+                        // ChatBody를 ChatRequest로 변환하여 컨텍스트 유지 기능 사용
+                        ChatRequest chatRequest = new ChatRequest();
+                        chatRequest.setQuery(chatBody.query());
+                        chatRequest.setSessionId(sessionId);
+                        // 기본 config 설정
+                        RAGConfig defaultConfig = new RAGConfig();
+                        defaultConfig.setTopK(5);
+                        defaultConfig.setThreshold(0.7);
+                        chatRequest.setConfig(defaultConfig);
+                        
+                        return chatService.chatEnhanced(chatRequest)
+                                .flatMap(response -> ServerResponse.ok()
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .header("X-Session-ID", sessionId)
+                                        .bodyValue(response));
                     } catch (Exception e) {
                         return ServerResponse.badRequest()
                                 .contentType(MediaType.APPLICATION_JSON)
