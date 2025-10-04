@@ -1,6 +1,7 @@
 package io.github.eschoe.llmragapi.domain.history;
 
 import io.github.eschoe.llmragapi.util.SimpleDurationParser;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,7 @@ public class ChatHistoryStore {
     private final ReactiveStringRedisTemplate redis;
     private final SimpleDurationParser parser;
 
-    public ChatHistoryStore(ReactiveStringRedisTemplate redis, SimpleDurationParser parser) {
+    public ChatHistoryStore(@Qualifier("redisWriterTemplate") ReactiveStringRedisTemplate redis, SimpleDurationParser parser) {
         this.redis = redis;
         this.parser = parser;
     }
