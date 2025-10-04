@@ -219,51 +219,50 @@ public class ChatImplService implements ChatService {
                         String systemPrompt = LlmConstants.SYSTEM_PROMPT;
                         String userPrompt = "QUESTION:\n" + llmQuery + "\n\nCONTEXT:\n" + contextBlock + conversationContext;
 
-            String ctxHash = hash.sha256(ctxVersion, systemPrompt, userPrompt);
+                        String ctxHash = hash.sha256(ctxVersion, systemPrompt, userPrompt);
 
-            // 1) 프롬프트 캐시 (기존 메서드 그대로 사용)
-            Mono<String> promptMono = cache.getOrBuildPrompt(
-                    partitionId,                          // ← 항상 "global"
-                    ctxHash,
-                    () -> Mono.just(toPromptJson(systemPrompt, userPrompt))
-            );
+                        // 1) 프롬프트 캐시 (기존 메서드 그대로 사용)
+                        Mono<String> promptMono = cache.getOrBuildPrompt(
+                                partitionId,                          // ← 항상 "global"
+                                ctxHash,
+                                () -> Mono.just(toPromptJson(systemPrompt, userPrompt))
+                        );
 
-            // 2) 응답 캐시 + 락 (기존 메서드 그대로 사용)
-            String inputHash = hash.sha256(llmModel, llmProvider, ctxVersion, systemPrompt, userPrompt);
-            Mono<String> answerMono = cache.getOrInvoke(
-                    llmModel,
-                    inputHash,
-                    () -> llmContextClient.chat(llmProvider, llmModel, systemPrompt, userPrompt)
-            );
+                        // 2) 응답 캐시 + 락 (기존 메서드 그대로 사용)
+                        String inputHash = hash.sha256(llmModel, llmProvider, ctxVersion, systemPrompt, userPrompt);
+                        Mono<String> answerMono = cache.getOrInvoke(
+                                llmModel,
+                                inputHash,
+                                () -> llmContextClient.chat(llmProvider, llmModel, systemPrompt, userPrompt)
+                        );
 
-            return promptMono.then(answerMono)
-                    .flatMap(answer -> {
-                        // 대화 히스토리에 저장 (질문과 답변을 JSON 형태로)
-                        String questionJson = String.format("{\"role\":\"user\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
-                                llmQuery.replace("\"", "\\\""), Instant.now());
-                        String answerJson = String.format("{\"role\":\"assistant\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
-                                answer.replace("\"", "\\\""), Instant.now());
-                        
-                        return chatHistoryStore.append(sessionId, questionJson)
-                                .then(chatHistoryStore.append(sessionId, answerJson))
-                                .thenReturn(new ChatResponse(
-                                        answer,
-                                        llmModel,
-                                        0,
-                                        Map.of(
-                                                "processingTime", Duration.between(startTime, Instant.now()).toMillis(),
-                                                "config", request.getConfig(),
-                                                "searchResults", searchResults.size(),
-                                                "averageScore", searchResults.stream().mapToDouble(SearchResult::getScore).average().orElse(0.0),
-                                                "timestamp", Instant.now(),
-                                                "provider", llmProvider,
-                                                "sessionId", sessionId
-                                        )
-                                ));
+                        return promptMono.then(answerMono)
+                                .flatMap(answer -> {
+                                    // 대화 히스토리에 저장 (질문과 답변을 JSON 형태로)
+                                    String questionJson = String.format("{\"role\":\"user\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
+                                            llmQuery.replace("\"", "\\\""), Instant.now());
+                                    String answerJson = String.format("{\"role\":\"assistant\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
+                                            answer.replace("\"", "\\\""), Instant.now());
+                                    
+                                    return chatHistoryStore.append(sessionId, questionJson)
+                                            .then(chatHistoryStore.append(sessionId, answerJson))
+                                            .thenReturn(new ChatResponse(
+                                                    answer,
+                                                    llmModel,
+                                                    0,
+                                                    Map.of(
+                                                            "processingTime", Duration.between(startTime, Instant.now()).toMillis(),
+                                                            "config", request.getConfig(),
+                                                            "searchResults", searchResults.size(),
+                                                            "averageScore", searchResults.stream().mapToDouble(SearchResult::getScore).average().orElse(0.0),
+                                                            "timestamp", Instant.now(),
+                                                            "provider", llmProvider
+                                                    ),
+                                                    sessionId
+                                            ));
+                                });
                     });
-
-                    });
-
+        });
     }
 
     private String toPromptJson(String systemPrompt, String userPrompt) {
