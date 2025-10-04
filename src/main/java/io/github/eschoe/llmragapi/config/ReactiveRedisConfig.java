@@ -21,7 +21,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
 
-@Configuration
+// @Configuration  // 단순한 Redis 설정을 위해 비활성화
 public class ReactiveRedisConfig {
 
     // ===== Writer (MASTER) =====
@@ -77,6 +77,7 @@ public class ReactiveRedisConfig {
         var clientCfg = LettuceClientConfiguration.builder()
                 .clientOptions(clientOptions)
                 .commandTimeout(Duration.ofSeconds(commandTimeoutSec))
+                .useSsl() // SSL 연결 활성화
                 .build();
 
         return new LettuceConnectionFactory(conf, clientCfg);
@@ -113,6 +114,7 @@ public class ReactiveRedisConfig {
                 .clientOptions(clientOptions)
                 .commandTimeout(Duration.ofSeconds(commandTimeoutSec))
                 .readFrom(ReadFrom.REPLICA_PREFERRED) // GET 등 읽기는 레플리카 우선
+                .useSsl() // SSL 연결 활성화
                 .build();
 
         return new LettuceConnectionFactory(conf, clientCfg);
