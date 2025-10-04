@@ -6,15 +6,17 @@ public class RAGConfig {
     private int maxTokens = 4000;
     private double temperature = 0.7;
     private String searchMode = "similarity";
+    private boolean bypassCache = false;
 
     public RAGConfig() {}
 
-    public RAGConfig(int topK, double threshold, int maxTokens, double temperature, String searchMode) {
+    public RAGConfig(int topK, double threshold, int maxTokens, double temperature, String searchMode, boolean bypassCache) {
         this.topK = topK;
         this.threshold = threshold;
         this.maxTokens = maxTokens;
         this.temperature = temperature;
         this.searchMode = searchMode;
+        this.bypassCache = bypassCache;
     }
 
     public int getTopK() { return topK; }
@@ -31,4 +33,8 @@ public class RAGConfig {
 
     public String getSearchMode() { return searchMode; }
     public void setSearchMode(String searchMode) { this.searchMode = searchMode; }
+
+    public boolean isBypassCache() {return bypassCache;}
+    public void setBypassCache(boolean bypassCache) {this.bypassCache = bypassCache;}
+
 }

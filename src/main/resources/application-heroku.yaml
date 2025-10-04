@@ -1,0 +1,31 @@
+# Heroku 전용 설정
+spring:
+  data:
+    redis:
+      # Heroku Redis Premium 플랜 사용 시
+      writer:
+        host: ${REDIS_WRITER_HOST:${REDIS_HOST}}
+        port: ${REDIS_WRITER_PORT:${REDIS_PORT}}
+        username: ${REDIS_WRITER_USERNAME:default}
+        password: ${REDIS_WRITER_PASSWORD:${REDIS_PASSWORD}}
+      reader:
+        host: ${REDIS_READER_HOST:${REDIS_HOST}}
+        port: ${REDIS_READER_PORT:${REDIS_PORT}}
+        username: ${REDIS_READER_USERNAME:default}
+        password: ${REDIS_READER_PASSWORD:${REDIS_PASSWORD}}
+      connect-timeout: 5000  # Heroku에서는 더 긴 타임아웃 필요
+      command-timeout: 5000
+
+# Heroku 환경에 맞는 로깅 설정
+logging:
+  level:
+    io.lettuce.core: INFO
+    org.springframework.data.redis: INFO
+    io.github.eschoe.llmragapi: INFO
+
+# Heroku 메모리 제한에 맞는 설정
+app:
+  llm:
+    hist-max: 30  # Heroku 메모리 제한으로 인해 히스토리 개수 제한
+    hist-ttl-times: 24h  # TTL도 단축
+

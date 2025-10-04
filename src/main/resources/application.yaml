@@ -33,6 +33,21 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  data:
+    redis:
+      writer:
+        host: ${REDIS_WRITER_HOST}
+        port: ${REDIS_WRITER_PORT}
+        username: default
+        password: ${REDIS_WRITER_PASSWORD}
+      reader:
+        host: ${REDIS_READER_HOST}
+        port: ${REDIS_READER_PORT}
+        username: default
+        password: ${REDIS_READER_PASSWORD}
+      connect-timeout: 1000
+      command-timeout: 1000
+
 
 management:
   endpoints:
@@ -46,9 +61,13 @@ management:
 
 logging:
   level:
-    org.springframework.r2dbc: INFO
-    io.r2dbc.postgresql: INFO
-    org.springframework.web: INFO
+    org.springframework.r2dbc: DEBUG
+    io.r2dbc.postgresql: DEBUG
+    org.springframework.web.reactive: DEBUG
+    org.springframework.web.reactive.function.client: ERROR
+    reactor.netty.http.client: ERROR
+    io.lettuce.core: ERROR
+    io.github.eschoe.llmragapi: ERROR
 
 app:
   cors:
@@ -56,3 +75,11 @@ app:
     allowed-methods: ${ALLOW_METHODS}
     allowed-headers: ${ALLOW_HEADERS}
     allowed-credentials: true
+  llm:
+    ctx-ttl-times: 15s
+    resp-ttl-times: 6h
+    hist-ttl-times: 48h
+    hist-max: 50
+  rateLimit:
+    window-sec: 60
+    limit: 60
