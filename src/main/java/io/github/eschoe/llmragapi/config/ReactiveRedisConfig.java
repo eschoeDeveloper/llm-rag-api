@@ -3,6 +3,7 @@ package io.github.eschoe.llmragapi.config;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.SocketOptions;
+import io.lettuce.core.SslOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
@@ -19,6 +20,10 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
+import javax.net.ssl.TrustManagerFactory;
+import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 
 @Configuration  // 단순한 Redis 설정을 위해 비활성화
@@ -78,6 +83,7 @@ public class ReactiveRedisConfig {
                 .clientOptions(clientOptions)
                 .commandTimeout(Duration.ofSeconds(commandTimeoutSec))
                 .useSsl() // SSL 연결 활성화
+                .disablePeerVerification()
                 .build();
 
         return new LettuceConnectionFactory(conf, clientCfg);
@@ -115,6 +121,7 @@ public class ReactiveRedisConfig {
                 .commandTimeout(Duration.ofSeconds(commandTimeoutSec))
                 .readFrom(ReadFrom.REPLICA_PREFERRED) // GET 등 읽기는 레플리카 우선
                 .useSsl() // SSL 연결 활성화
+                .disablePeerVerification()
                 .build();
 
         return new LettuceConnectionFactory(conf, clientCfg);
@@ -138,6 +145,22 @@ public class ReactiveRedisConfig {
     public ReactiveRedisTemplate<String, String> redisReaderJsonTemplate(
             @Qualifier("redisReaderFactory") LettuceConnectionFactory f) {
         return new ReactiveRedisTemplate<>(f, RedisSerializationContext.string());
+    }
+
+    private TrustManagerFactory trustManagerFromPem(String pem) throws Exception {
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        ks.load(null);
+
+        int i = 0;
+        try (var in = new java.io.ByteArrayInputStream(pem.getBytes())) {
+            for (var cert : cf.generateCertificates(in)) {
+                ks.setCertificateEntry("ca-" + (i++), (X509Certificate) cert);
+            }
+        }
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(ks);
+        return tmf;
     }
 
 }
