@@ -1,6 +1,7 @@
 package io.github.eschoe.llmragapi.domain.document;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -10,7 +11,7 @@ public class DocumentUploadResponse {
     private String status;
     private int totalChunks;
     private int processedChunks;
-    private LocalDateTime uploadedAt;
+    private String uploadedAt;
     private List<String> errors;
     private Map<String, Object> metadata;
 
@@ -20,7 +21,7 @@ public class DocumentUploadResponse {
         this.documentId = documentId;
         this.title = title;
         this.status = status;
-        this.uploadedAt = LocalDateTime.now();
+        this.uploadedAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
 
     // Getters and Setters
@@ -39,8 +40,8 @@ public class DocumentUploadResponse {
     public int getProcessedChunks() { return processedChunks; }
     public void setProcessedChunks(int processedChunks) { this.processedChunks = processedChunks; }
 
-    public LocalDateTime getUploadedAt() { return uploadedAt; }
-    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public String getUploadedAt() { return uploadedAt; }
+    public void setUploadedAt(String uploadedAt) { this.uploadedAt = uploadedAt; }
 
     public List<String> getErrors() { return errors; }
     public void setErrors(List<String> errors) { this.errors = errors; }
