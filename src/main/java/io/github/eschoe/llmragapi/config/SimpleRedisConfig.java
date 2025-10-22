@@ -86,6 +86,13 @@ public class SimpleRedisConfig {
         return new ReactiveStringRedisTemplate(connectionFactory);
     }
 
+    // LlmCacheImplService에서 사용하는 redisReaderTemplate 빈 추가
+    @Bean("redisReaderTemplate")
+    public ReactiveStringRedisTemplate redisReaderTemplate(
+            ReactiveRedisConnectionFactory connectionFactory) {
+        return new ReactiveStringRedisTemplate(connectionFactory);
+    }
+
     @Bean
     public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(
             ReactiveRedisConnectionFactory connectionFactory) {
