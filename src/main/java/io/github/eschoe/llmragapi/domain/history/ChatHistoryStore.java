@@ -45,8 +45,15 @@ public class ChatHistoryStore {
 
         String redisKey = "chat:hist:%s".formatted(sessionId);
 
-        // 최신 메시지들을 가져오기 위해 음수 인덱스 사용
-        return redis.opsForList().range(redisKey, -rateLimit, -1)
+        // leftPush를 사용하므로 최신 메시지가 인덱스 0에 있음
+        // 따라서 0부터 rateLimit-1까지 가져와서 역순으로 정렬 (오래된 것부터)
+        return redis.opsForList().range(redisKey, 0, rateLimit - 1)
+                .collectList()
+                .flatMapMany(list -> {
+                    // 오래된 메시지부터 보여주기 위해 역순으로 정렬
+                    java.util.Collections.reverse(list);
+                    return Flux.fromIterable(list);
+                })
                 .onErrorResume(throwable -> {
                     // Redis 연결 오류 시 빈 Flux 반환 (첫 번째 요청에서 히스토리 없음)
                     System.err.println("Redis connection error in recent(): " + throwable.getMessage());
