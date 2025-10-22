@@ -33,12 +33,16 @@ public class DocumentUploadHandler {
     }
 
     public Mono<ServerResponse> uploadDocument(ServerRequest request) {
+        System.out.println("[DocumentUploadHandler] Upload request received");
         final String sessionId = sessionUtil.extractSessionId(request);
+        System.out.println("[DocumentUploadHandler] Session ID: " + sessionId);
         
         // Rate Limiting 체크
         return rateLimitingService.isAllowed(sessionId)
+                .doOnNext(allowed -> System.out.println("[DocumentUploadHandler] Rate limit check: " + allowed))
                 .flatMap(allowed -> {
                     if (!allowed) {
+                        System.out.println("[DocumentUploadHandler] Rate limit exceeded");
                         return ServerResponse.status(429)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .bodyValue(new DetailedErrorResponse(
@@ -49,8 +53,11 @@ public class DocumentUploadHandler {
                                 ));
                     }
                     
+                    System.out.println("[DocumentUploadHandler] Processing document upload");
                     return processDocumentUpload(request, sessionId);
                 })
+                .doOnSuccess(response -> System.out.println("[DocumentUploadHandler] Upload successful"))
+                .doOnError(e -> System.err.println("[DocumentUploadHandler] Upload error: " + e.getMessage()))
                 .onErrorResume(e -> handleError(e, sessionId));
     }
 
