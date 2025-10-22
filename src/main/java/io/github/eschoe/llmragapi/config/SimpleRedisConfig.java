@@ -20,7 +20,7 @@ import java.time.Duration;
 @Configuration
 public class SimpleRedisConfig {
 
-    @Value("${REDIS_URL:}")
+    @Value("${spring.data.redis.url:}")
     private String redisUrl;
 
     @Value("${spring.data.redis.writer.host:}")
@@ -53,21 +53,39 @@ public class SimpleRedisConfig {
                 .keepAlive(true)  // Keep-Alive 활성화
                 .build();
 
-        var clientOptions = ClientOptions.builder()
-                .socketOptions(socket)
-                .autoReconnect(true)  // 자동 재연결 활성화
-                .build();
-
-        var clientCfgBuilder = LettuceClientConfiguration.builder()
-                .clientOptions(clientOptions)
-                .commandTimeout(Duration.ofSeconds(30))  // 명령 타임아웃 증가
-                .shutdownTimeout(Duration.ofSeconds(5));
+        LettuceClientConfiguration clientCfg;
         
         if (redisUrl != null && redisUrl.startsWith("rediss://")) {
-            clientCfgBuilder.useSsl();
+            // Heroku Redis는 자체 서명된 인증서를 사용하므로 인증서 검증 비활성화
+            io.lettuce.core.SslOptions sslOptions = io.lettuce.core.SslOptions.builder()
+                    .jdkSslProvider()
+                    .build();
+            
+            io.lettuce.core.ClientOptions sslClientOptions = ClientOptions.builder()
+                    .socketOptions(socket)
+                    .sslOptions(sslOptions)
+                    .autoReconnect(true)
+                    .build();
+            
+            clientCfg = LettuceClientConfiguration.builder()
+                    .commandTimeout(Duration.ofSeconds(30))
+                    .shutdownTimeout(Duration.ofSeconds(5))
+                    .clientOptions(sslClientOptions)
+                    .useSsl()
+                    .disablePeerVerification()  // 인증서 검증 비활성화
+                    .build();
+        } else {
+            var clientOptions = ClientOptions.builder()
+                    .socketOptions(socket)
+                    .autoReconnect(true)
+                    .build();
+            
+            clientCfg = LettuceClientConfiguration.builder()
+                    .commandTimeout(Duration.ofSeconds(30))
+                    .shutdownTimeout(Duration.ofSeconds(5))
+                    .clientOptions(clientOptions)
+                    .build();
         }
-        
-        var clientCfg = clientCfgBuilder.build();
 
         return new LettuceConnectionFactory(config, clientCfg);
     }
@@ -82,6 +100,13 @@ public class SimpleRedisConfig {
     // LlmCacheImplService에서 사용하는 redisWriterTemplate 빈 추가
     @Bean("redisWriterTemplate")
     public ReactiveStringRedisTemplate redisWriterTemplate(
+            ReactiveRedisConnectionFactory connectionFactory) {
+        return new ReactiveStringRedisTemplate(connectionFactory);
+    }
+
+    // LlmCacheImplService에서 사용하는 redisReaderTemplate 빈 추가
+    @Bean("redisReaderTemplate")
+    public ReactiveStringRedisTemplate redisReaderTemplate(
             ReactiveRedisConnectionFactory connectionFactory) {
         return new ReactiveStringRedisTemplate(connectionFactory);
     }

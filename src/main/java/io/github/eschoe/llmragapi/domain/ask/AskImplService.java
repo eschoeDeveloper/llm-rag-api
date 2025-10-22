@@ -62,6 +62,7 @@ public class AskImplService implements AskService {
 
         // 세션 ID 처리 (없으면 기본값 사용)
         String sessionId = ask.getSessionId() != null ? ask.getSessionId() : "default-session";
+        System.out.println("[AskImplService] Session ID: " + sessionId);
 
         // 이전 대화 히스토리 가져오기 (최근 10개) - 타임아웃 5초
         return chatHistoryStore.recent(sessionId, 10)
@@ -69,6 +70,11 @@ public class AskImplService implements AskService {
                 .timeout(Duration.ofSeconds(5))
                 .onErrorReturn(List.of())  // 타임아웃 시 빈 리스트 반환
                 .flatMap(historyMessages -> {
+                    
+                    System.out.println("[AskImplService] History messages count: " + historyMessages.size());
+                    if (!historyMessages.isEmpty()) {
+                        System.out.println("[AskImplService] History: " + historyMessages);
+                    }
                     
                     // 대화 히스토리를 프롬프트에 포함
                     String conversationContext = "";
@@ -110,6 +116,10 @@ public class AskImplService implements AskService {
                                         llmQuery.replace("\"", "\\\""), Instant.now());
                                 String answerJson = String.format("{\"role\":\"assistant\",\"content\":\"%s\",\"timestamp\":\"%s\"}", 
                                         response.replace("\"", "\\\""), Instant.now());
+                                
+                                System.out.println("[AskImplService] Saving to history - Session: " + sessionId);
+                                System.out.println("[AskImplService] Question: " + questionJson);
+                                System.out.println("[AskImplService] Answer: " + answerJson);
                                 
                                 return chatHistoryStore.append(sessionId, questionJson)
                                         .then(chatHistoryStore.append(sessionId, answerJson))
