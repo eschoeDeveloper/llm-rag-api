@@ -33,6 +33,7 @@ public class AskHandler {
                             return askService.askEnhanced(askRequest)
                                     .flatMap(response -> ServerResponse.ok()
                                             .contentType(MediaType.APPLICATION_JSON)
+                                            .header("X-Session-ID", askRequest.getSessionId() != null ? askRequest.getSessionId() : "default-session")
                                             .bodyValue(response));
                         }
                     } catch (Exception e) {
