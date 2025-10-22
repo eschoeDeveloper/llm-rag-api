@@ -16,17 +16,11 @@ public class DocumentUploadRouter {
     public RouterFunction<ServerResponse> documentRoutes(DocumentUploadHandler handler) {
         return route()
                 .POST("/api/documents/upload", 
-                      accept(MediaType.MULTIPART_FORM_DATA), 
+                      contentType(MediaType.MULTIPART_FORM_DATA), 
                       handler::uploadDocument)
-                .GET("/api/documents", 
-                     accept(MediaType.APPLICATION_JSON), 
-                     handler::getUserDocuments)
-                .GET("/api/documents/{documentId}", 
-                     accept(MediaType.APPLICATION_JSON), 
-                     handler::getDocument)
-                .DELETE("/api/documents/{documentId}", 
-                        accept(MediaType.APPLICATION_JSON), 
-                        handler::deleteDocument)
+                .GET("/api/documents", handler::getUserDocuments)
+                .GET("/api/documents/{documentId}", handler::getDocument)
+                .DELETE("/api/documents/{documentId}", handler::deleteDocument)
                 .build();
     }
 }
