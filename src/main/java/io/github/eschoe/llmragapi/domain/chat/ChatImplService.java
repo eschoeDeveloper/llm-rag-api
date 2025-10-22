@@ -203,9 +203,11 @@ public class ChatImplService implements ChatService {
                             llmRagUtil.safeSnippet(r.getContent()), r.getScore()))
                     .collect(Collectors.joining("\n"));
 
-            // 이전 대화 히스토리 가져오기 (최근 10개)
+            // 이전 대화 히스토리 가져오기 (최근 10개) - 타임아웃 5초
             return chatHistoryStore.recent(sessionId, 10)
                     .collectList()
+                    .timeout(Duration.ofSeconds(5))
+                    .onErrorReturn(List.of())  // 타임아웃 시 빈 리스트 반환
                     .flatMap(historyMessages -> {
                         
                         // 대화 히스토리를 프롬프트에 포함

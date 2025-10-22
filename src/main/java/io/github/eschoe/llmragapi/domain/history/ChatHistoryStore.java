@@ -32,7 +32,12 @@ public class ChatHistoryStore {
         return redis.opsForList().leftPush(redisKey, messageJson)
                 .then(redis.opsForList().trim(redisKey, 0, historyMax - 1))
                 .then(redis.expire(redisKey, ttlTimes))
-                .then();
+                .then()
+                .onErrorResume(throwable -> {
+                    // Redis 연결 오류 시 로그만 출력하고 계속 진행
+                    System.err.println("Redis connection error in append(): " + throwable.getMessage());
+                    return Mono.empty();
+                });
 
     }
 
@@ -40,7 +45,13 @@ public class ChatHistoryStore {
 
         String redisKey = "chat:hist:%s".formatted(sessionId);
 
-        return redis.opsForList().range(redisKey, 0, rateLimit - 1);
+        // 최신 메시지들을 가져오기 위해 음수 인덱스 사용
+        return redis.opsForList().range(redisKey, -rateLimit, -1)
+                .onErrorResume(throwable -> {
+                    // Redis 연결 오류 시 빈 Flux 반환 (첫 번째 요청에서 히스토리 없음)
+                    System.err.println("Redis connection error in recent(): " + throwable.getMessage());
+                    return Flux.empty();
+                });
 
     }
 

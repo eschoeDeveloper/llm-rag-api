@@ -60,7 +60,7 @@ class AskRouterTest {
         config.setThreshold(0.7);
         config.setTemperature(0.7);
 
-        AskRequest request = new AskRequest("What is artificial intelligence?", config);
+        AskRequest request = new AskRequest("What is artificial intelligence?", config, "test-session");
 
         webTestClient.post()
                 .uri("/api/ask")

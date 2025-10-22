@@ -4,6 +4,7 @@ import io.github.eschoe.llmragapi.entity.EmbeddingRow;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.sql.Types;
 import java.time.OffsetDateTime;
@@ -40,6 +41,32 @@ public class EmbeddingQueryDao {
                 })
                 .all();
 
+    }
+
+    public Mono<EmbeddingRow> save(EmbeddingRow row) {
+        String sql = """
+                INSERT INTO chatbot.embeddings (id, title, content, embedding, created_at)
+                VALUES (:id, :title, :content, :embedding::vector, :createdAt)
+                """;
+
+        return dbClient.sql(sql)
+                .bind("id", row.getId())
+                .bind("title", row.getTitle())
+                .bind("content", row.getContent())
+                .bind("embedding", row.getEmbedding())
+                .bind("createdAt", row.getCreatedAt())
+                .fetch()
+                .rowsUpdated()
+                .thenReturn(row);
+    }
+
+    public Mono<Long> deleteByTitle(String titlePattern) {
+        String sql = "DELETE FROM chatbot.embeddings WHERE title LIKE :titlePattern";
+        
+        return dbClient.sql(sql)
+                .bind("titlePattern", titlePattern)
+                .fetch()
+                .rowsUpdated();
     }
 
 }
