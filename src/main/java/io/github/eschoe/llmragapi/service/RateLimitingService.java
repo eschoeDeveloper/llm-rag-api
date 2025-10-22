@@ -26,19 +26,18 @@ public class RateLimitingService {
         String key = "rate_limit:" + sessionId;
         
         return redis.opsForValue().get(key)
+                .defaultIfEmpty("0") // empty Mono를 "0"으로 변환
                 .flatMap(currentCount -> {
-                    if (currentCount == null) {
+                    int count = Integer.parseInt(currentCount);
+                    if (count == 0) {
                         // 첫 번째 요청
                         return redis.opsForValue().set(key, "1", Duration.ofSeconds(windowSeconds))
                                 .thenReturn(true);
+                    } else if (count >= maxRequests) {
+                        return Mono.just(false);
                     } else {
-                        int count = Integer.parseInt(currentCount);
-                        if (count >= maxRequests) {
-                            return Mono.just(false);
-                        } else {
-                            return redis.opsForValue().increment(key)
-                                    .thenReturn(true);
-                        }
+                        return redis.opsForValue().increment(key)
+                                .thenReturn(true);
                     }
                 })
                 .onErrorReturn(true); // Redis 오류 시 허용
