@@ -12,7 +12,7 @@ public class RedisHealthIndicator implements HealthIndicator {
 
     private final ReactiveRedisConnectionFactory redisConnectionFactory;
 
-    public RedisHealthIndicator(@Qualifier("redisWriterFactory") ReactiveRedisConnectionFactory redisConnectionFactory) {
+    public RedisHealthIndicator(ReactiveRedisConnectionFactory redisConnectionFactory) {
         this.redisConnectionFactory = redisConnectionFactory;
     }
 
