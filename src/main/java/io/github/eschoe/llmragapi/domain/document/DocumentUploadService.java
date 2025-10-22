@@ -47,26 +47,32 @@ public class DocumentUploadService {
                                                       String fileName, 
                                                       DocumentUploadRequest request) {
         String documentId = UUID.randomUUID().toString();
+        DocumentUploadResponse response = new DocumentUploadResponse(documentId, request.getTitle(), "UPLOADING");
         
-        return Mono.just(new DocumentUploadResponse(documentId, request.getTitle(), "UPLOADING"))
-                .flatMap(response -> {
-                    // 1. 문서 파싱
-                    return parsingService.extractText(fileContent, fileName)
-                            .flatMap(text -> parsingService.splitIntoChunks(text, chunkSize, overlapSize)
-                                    .flatMap(chunks -> {
-                                        response.setTotalChunks(chunks.size());
-                                        response.setStatus("PROCESSING");
-                                        
-                                        // 2. 각 청크에 대해 임베딩 생성 및 저장
-                                        return processChunks(documentId, chunks, request)
-                                                .map(processedCount -> {
-                                                    response.setProcessedChunks(processedCount);
-                                                    response.setStatus("COMPLETED");
-                                                    return response;
-                                                });
-                                    }));
+        System.out.println("[DocumentUploadService] Starting document upload: " + fileName);
+        
+        // 1. 문서 파싱
+        return parsingService.extractText(fileContent, fileName)
+                .doOnNext(text -> System.out.println("[DocumentUploadService] Text extracted, length: " + text.length()))
+                .flatMap(text -> parsingService.splitIntoChunks(text, chunkSize, overlapSize))
+                .doOnNext(chunks -> System.out.println("[DocumentUploadService] Chunks created: " + chunks.size()))
+                .flatMap(chunks -> {
+                    response.setTotalChunks(chunks.size());
+                    response.setStatus("PROCESSING");
+                    
+                    // 2. 각 청크에 대해 임베딩 생성 및 저장
+                    return processChunks(documentId, chunks, request)
+                            .map(processedCount -> {
+                                System.out.println("[DocumentUploadService] Processed chunks: " + processedCount);
+                                response.setProcessedChunks(processedCount);
+                                response.setStatus("COMPLETED");
+                                return response;
+                            });
                 })
+                .doOnSuccess(r -> System.out.println("[DocumentUploadService] Upload completed: " + r))
+                .doOnError(e -> System.err.println("[DocumentUploadService] Upload error: " + e.getMessage()))
                 .onErrorResume(e -> {
+                    System.err.println("[DocumentUploadService] Creating error response");
                     DocumentUploadResponse errorResponse = new DocumentUploadResponse(documentId, request.getTitle(), "FAILED");
                     errorResponse.setErrors(List.of("문서 처리 실패: " + e.getMessage()));
                     return Mono.just(errorResponse);
