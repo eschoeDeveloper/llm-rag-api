@@ -49,16 +49,19 @@ public class SimpleRedisConfig {
         }
 
         var socket = SocketOptions.builder()
-                .connectTimeout(Duration.ofSeconds(10))
+                .connectTimeout(Duration.ofSeconds(30))  // 연결 타임아웃 증가
+                .keepAlive(true)  // Keep-Alive 활성화
                 .build();
 
         var clientOptions = ClientOptions.builder()
                 .socketOptions(socket)
+                .autoReconnect(true)  // 자동 재연결 활성화
                 .build();
 
         var clientCfgBuilder = LettuceClientConfiguration.builder()
                 .clientOptions(clientOptions)
-                .commandTimeout(Duration.ofSeconds(10));
+                .commandTimeout(Duration.ofSeconds(30))  // 명령 타임아웃 증가
+                .shutdownTimeout(Duration.ofSeconds(5));
         
         if (redisUrl != null && redisUrl.startsWith("rediss://")) {
             clientCfgBuilder.useSsl();
