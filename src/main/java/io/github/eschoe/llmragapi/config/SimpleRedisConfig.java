@@ -20,7 +20,7 @@ import java.time.Duration;
 @Configuration
 public class SimpleRedisConfig {
 
-    @Value("${REDIS_URL:}")
+    @Value("${spring.data.redis.url:}")
     private String redisUrl;
 
     @Value("${spring.data.redis.writer.host:}")
