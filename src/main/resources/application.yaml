@@ -81,6 +81,10 @@ app:
     resp-ttl-times: 6h
     hist-ttl-times: 48h
     hist-max: 50
-  rateLimit:
+    embedding-model: text-embedding-3-small
+  document:
+    chunk-size: 1000
+    overlap-size: 100
+  rate-limit:
     window-sec: 60
     limit: 60
