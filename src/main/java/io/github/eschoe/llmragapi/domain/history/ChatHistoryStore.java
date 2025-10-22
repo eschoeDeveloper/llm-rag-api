@@ -40,7 +40,8 @@ public class ChatHistoryStore {
 
         String redisKey = "chat:hist:%s".formatted(sessionId);
 
-        return redis.opsForList().range(redisKey, 0, rateLimit - 1);
+        // 최신 메시지들을 가져오기 위해 음수 인덱스 사용
+        return redis.opsForList().range(redisKey, -rateLimit, -1);
 
     }
 
