@@ -8,6 +8,7 @@ public class ChatResponse {
     private int tokens;
     private Map<String, Object> metadata;
     private String sessionId;
+    private ProcessingStatus processingStatus;
 
     public ChatResponse() {}
 
@@ -40,4 +41,7 @@ public class ChatResponse {
 
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+
+    public ProcessingStatus getProcessingStatus() { return processingStatus; }
+    public void setProcessingStatus(ProcessingStatus processingStatus) { this.processingStatus = processingStatus; }
 }
