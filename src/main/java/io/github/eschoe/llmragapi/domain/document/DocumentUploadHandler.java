@@ -6,6 +6,7 @@ import io.github.eschoe.llmragapi.util.SessionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -67,11 +68,10 @@ public class DocumentUploadHandler {
                 .doOnNext(parts -> System.out.println("[DocumentUploadHandler] Multipart data received, parts: " + parts.toSingleValueMap().keySet()))
                 .flatMap(parts -> {
                     FilePart filePart = (FilePart) parts.toSingleValueMap().get("file");
-                    Object metadataPart = parts.toSingleValueMap().get("metadata");
-                    String metadataJson = metadataPart != null ? metadataPart.toString() : null;
+                    Part metadataPart = parts.toSingleValueMap().get("metadata");
                     
                     System.out.println("[DocumentUploadHandler] File part: " + (filePart != null ? filePart.filename() : "null"));
-                    System.out.println("[DocumentUploadHandler] Metadata: " + metadataJson);
+                    System.out.println("[DocumentUploadHandler] Metadata part: " + metadataPart);
                     
                     if (filePart == null) {
                         System.err.println("[DocumentUploadHandler] File part is null!");
@@ -85,59 +85,83 @@ public class DocumentUploadHandler {
                                 ));
                     }
                     
-                    // 메타데이터 파싱
-                    DocumentUploadRequest uploadRequest;
-                    try {
-                        if (metadataJson != null && !metadataJson.trim().isEmpty()) {
-                            uploadRequest = objectMapper.readValue(metadataJson, DocumentUploadRequest.class);
-                        } else {
-                            uploadRequest = new DocumentUploadRequest();
-                        }
-                    } catch (Exception e) {
-                        System.err.println("[DocumentUploadHandler] Metadata parsing error: " + e.getMessage());
-                        uploadRequest = new DocumentUploadRequest();
+                    // 메타데이터 파싱 (FormFieldPart에서 실제 content 읽기)
+                    Mono<DocumentUploadRequest> metadataMono;
+                    if (metadataPart != null) {
+                        metadataMono = metadataPart.content()
+                                .map(dataBuffer -> {
+                                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                    dataBuffer.read(bytes);
+                                    return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                                })
+                                .reduce("", (s1, s2) -> s1 + s2)
+                                .map(metadataJson -> {
+                                    System.out.println("[DocumentUploadHandler] Metadata JSON: " + metadataJson);
+                                    try {
+                                        if (metadataJson != null && !metadataJson.trim().isEmpty()) {
+                                            return objectMapper.readValue(metadataJson, DocumentUploadRequest.class);
+                                        }
+                                    } catch (Exception e) {
+                                        System.err.println("[DocumentUploadHandler] Metadata parsing error: " + e.getMessage());
+                                    }
+                                    // 기본값 설정
+                                    DocumentUploadRequest defaultRequest = new DocumentUploadRequest();
+                                    defaultRequest.setTitle("Untitled Document");
+                                    defaultRequest.setDescription("");
+                                    defaultRequest.setCategory("");
+                                    return defaultRequest;
+                                });
+                    } else {
+                        // 메타데이터가 없는 경우 기본값
+                        DocumentUploadRequest defaultRequest = new DocumentUploadRequest();
+                        defaultRequest.setTitle("Untitled Document");
+                        defaultRequest.setDescription("");
+                        defaultRequest.setCategory("");
+                        metadataMono = Mono.just(defaultRequest);
                     }
                     
-                    final DocumentUploadRequest finalUploadRequest = uploadRequest;
-                    finalUploadRequest.setSessionId(sessionId);
-                    
-                    System.out.println("[DocumentUploadHandler] Reading file content...");
-                    // 파일 크기 체크 (10MB 제한)
-                    return filePart.content()
-                            .collectList()
-                            .doOnNext(buffers -> System.out.println("[DocumentUploadHandler] Collected " + buffers.size() + " buffers"))
-                            .map(dataBuffers -> {
-                                int totalSize = dataBuffers.stream()
-                                        .mapToInt(buffer -> buffer.readableByteCount())
-                                        .sum();
-                                
-                                System.out.println("[DocumentUploadHandler] Total file size: " + totalSize + " bytes");
-                                
-                                if (totalSize > 10 * 1024 * 1024) { // 10MB
-                                    throw new RuntimeException("파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.");
-                                }
-                                
-                                byte[] fileContent = new byte[totalSize];
-                                int offset = 0;
-                                for (org.springframework.core.io.buffer.DataBuffer buffer : dataBuffers) {
-                                    buffer.read(fileContent, offset, buffer.readableByteCount());
-                                    offset += buffer.readableByteCount();
-                                }
-                                
-                                return fileContent;
-                            })
-                            .doOnNext(content -> System.out.println("[DocumentUploadHandler] File content ready, calling uploadService"))
-                            .flatMap(fileContent -> uploadService.uploadDocument(fileContent, filePart.filename(), finalUploadRequest))
-                            .doOnNext(response -> System.out.println("[DocumentUploadHandler] Upload service returned: " + response))
-                            .flatMap(response -> {
-                                System.out.println("[DocumentUploadHandler] Creating response with: " + response);
-                                return ServerResponse.ok()
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .header("X-Session-ID", sessionId)
-                                        .bodyValue(response);
-                            })
-                            .doOnSuccess(serverResponse -> System.out.println("[DocumentUploadHandler] ServerResponse created successfully"))
-                            .doOnError(e -> System.err.println("[DocumentUploadHandler] Error in processDocumentUpload: " + e.getMessage()));
+                    return metadataMono.flatMap(uploadRequest -> {
+                        final DocumentUploadRequest finalUploadRequest = uploadRequest;
+                        finalUploadRequest.setSessionId(sessionId);
+                        
+                        System.out.println("[DocumentUploadHandler] Reading file content...");
+                        // 파일 크기 체크 (10MB 제한)
+                        return filePart.content()
+                                .collectList()
+                                .doOnNext(buffers -> System.out.println("[DocumentUploadHandler] Collected " + buffers.size() + " buffers"))
+                                .map(dataBuffers -> {
+                                    int totalSize = dataBuffers.stream()
+                                            .mapToInt(buffer -> buffer.readableByteCount())
+                                            .sum();
+                                    
+                                    System.out.println("[DocumentUploadHandler] Total file size: " + totalSize + " bytes");
+                                    
+                                    if (totalSize > 10 * 1024 * 1024) { // 10MB
+                                        throw new RuntimeException("파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.");
+                                    }
+                                    
+                                    byte[] fileContent = new byte[totalSize];
+                                    int offset = 0;
+                                    for (org.springframework.core.io.buffer.DataBuffer buffer : dataBuffers) {
+                                        buffer.read(fileContent, offset, buffer.readableByteCount());
+                                        offset += buffer.readableByteCount();
+                                    }
+                                    
+                                    return fileContent;
+                                })
+                                .doOnNext(content -> System.out.println("[DocumentUploadHandler] File content ready, calling uploadService"))
+                                .flatMap(fileContent -> uploadService.uploadDocument(fileContent, filePart.filename(), finalUploadRequest))
+                                .doOnNext(response -> System.out.println("[DocumentUploadHandler] Upload service returned: " + response))
+                                .flatMap(response -> {
+                                    System.out.println("[DocumentUploadHandler] Creating response with: " + response);
+                                    return ServerResponse.ok()
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .header("X-Session-ID", sessionId)
+                                            .bodyValue(response);
+                                })
+                                .doOnSuccess(serverResponse -> System.out.println("[DocumentUploadHandler] ServerResponse created successfully"))
+                                .doOnError(e -> System.err.println("[DocumentUploadHandler] Error in processDocumentUpload: " + e.getMessage()));
+                    });
                 });
     }
 
