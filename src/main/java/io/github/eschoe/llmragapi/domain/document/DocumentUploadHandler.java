@@ -62,13 +62,19 @@ public class DocumentUploadHandler {
     }
 
     private Mono<ServerResponse> processDocumentUpload(ServerRequest request, String sessionId) {
+        System.out.println("[DocumentUploadHandler] processDocumentUpload called");
         return request.multipartData()
+                .doOnNext(parts -> System.out.println("[DocumentUploadHandler] Multipart data received, parts: " + parts.toSingleValueMap().keySet()))
                 .flatMap(parts -> {
                     FilePart filePart = (FilePart) parts.toSingleValueMap().get("file");
                     Object metadataPart = parts.toSingleValueMap().get("metadata");
                     String metadataJson = metadataPart != null ? metadataPart.toString() : null;
                     
+                    System.out.println("[DocumentUploadHandler] File part: " + (filePart != null ? filePart.filename() : "null"));
+                    System.out.println("[DocumentUploadHandler] Metadata: " + metadataJson);
+                    
                     if (filePart == null) {
+                        System.err.println("[DocumentUploadHandler] File part is null!");
                         return ServerResponse.badRequest()
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .bodyValue(new DetailedErrorResponse(
@@ -88,19 +94,24 @@ public class DocumentUploadHandler {
                             uploadRequest = new DocumentUploadRequest();
                         }
                     } catch (Exception e) {
+                        System.err.println("[DocumentUploadHandler] Metadata parsing error: " + e.getMessage());
                         uploadRequest = new DocumentUploadRequest();
                     }
                     
                     final DocumentUploadRequest finalUploadRequest = uploadRequest;
                     finalUploadRequest.setSessionId(sessionId);
                     
+                    System.out.println("[DocumentUploadHandler] Reading file content...");
                     // 파일 크기 체크 (10MB 제한)
                     return filePart.content()
                             .collectList()
+                            .doOnNext(buffers -> System.out.println("[DocumentUploadHandler] Collected " + buffers.size() + " buffers"))
                             .map(dataBuffers -> {
                                 int totalSize = dataBuffers.stream()
                                         .mapToInt(buffer -> buffer.readableByteCount())
                                         .sum();
+                                
+                                System.out.println("[DocumentUploadHandler] Total file size: " + totalSize + " bytes");
                                 
                                 if (totalSize > 10 * 1024 * 1024) { // 10MB
                                     throw new RuntimeException("파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.");
@@ -115,11 +126,18 @@ public class DocumentUploadHandler {
                                 
                                 return fileContent;
                             })
+                            .doOnNext(content -> System.out.println("[DocumentUploadHandler] File content ready, calling uploadService"))
                             .flatMap(fileContent -> uploadService.uploadDocument(fileContent, filePart.filename(), finalUploadRequest))
-                            .flatMap(response -> ServerResponse.ok()
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .header("X-Session-ID", sessionId)
-                                    .bodyValue(response));
+                            .doOnNext(response -> System.out.println("[DocumentUploadHandler] Upload service returned: " + response))
+                            .flatMap(response -> {
+                                System.out.println("[DocumentUploadHandler] Creating response with: " + response);
+                                return ServerResponse.ok()
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .header("X-Session-ID", sessionId)
+                                        .bodyValue(response);
+                            })
+                            .doOnSuccess(serverResponse -> System.out.println("[DocumentUploadHandler] ServerResponse created successfully"))
+                            .doOnError(e -> System.err.println("[DocumentUploadHandler] Error in processDocumentUpload: " + e.getMessage()));
                 });
     }
 
