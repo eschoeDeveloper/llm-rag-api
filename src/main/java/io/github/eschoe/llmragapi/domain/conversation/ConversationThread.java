@@ -1,6 +1,7 @@
 package io.github.eschoe.llmragapi.domain.conversation;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ public class ConversationThread {
         this.status = ThreadStatus.ACTIVE;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.messages = new ArrayList<>();
     }
 
     // Getters and Setters

@@ -118,25 +118,66 @@ public class SimpleRedisConfig {
     }
 
     private RedisStandaloneConfiguration parseRedisUrl(String redisUrl) {
-        // rediss://:password@host:port 형식 파싱
+        System.out.println("DEBUG: Parsing Redis URL: " + redisUrl);
+        
+        // redis://:password@host:port 또는 redis://username:password@host:port 형식 파싱
         String url = redisUrl.replace("redis://", "").replace("rediss://", "");
         String[] parts = url.split("@");
         
+        System.out.println("DEBUG: URL parts length: " + parts.length);
+        for (int i = 0; i < parts.length; i++) {
+            System.out.println("DEBUG: Part " + i + ": " + parts[i]);
+        }
+        
         if (parts.length == 2) {
-            String[] authParts = parts[0].split(":");
+            String authPart = parts[0];
             String[] hostParts = parts[1].split(":");
             
-            String password = authParts.length > 1 ? authParts[1] : "";
             String host = hostParts[0];
             int port = hostParts.length > 1 ? Integer.parseInt(hostParts[1]) : 6379;
             
+            System.out.println("DEBUG: Host: " + host + ", Port: " + port);
+            System.out.println("DEBUG: Auth part: " + authPart);
+            
             RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
-            if (!password.isEmpty()) {
-                config.setPassword(RedisPassword.of(password));
+            
+            // authPart가 ":password" 형식인지 확인
+            if (authPart.startsWith(":")) {
+                String password = authPart.substring(1); // ":" 제거하고 비밀번호만 추출
+                // URL 디코딩 적용
+                try {
+                    password = java.net.URLDecoder.decode(password, "UTF-8");
+                } catch (Exception e) {
+                    System.out.println("DEBUG: URL decoding failed: " + e.getMessage());
+                }
+                System.out.println("DEBUG: Extracted password: " + password);
+                if (!password.isEmpty()) {
+                    config.setPassword(RedisPassword.of(password));
+                    System.out.println("DEBUG: Password set successfully");
+                }
+            } else {
+                // username:password 형식인 경우
+                String[] authParts = authPart.split(":");
+                if (authParts.length > 1) {
+                    String password = authParts[1];
+                    // URL 디코딩 적용
+                    try {
+                        password = java.net.URLDecoder.decode(password, "UTF-8");
+                    } catch (Exception e) {
+                        System.out.println("DEBUG: URL decoding failed: " + e.getMessage());
+                    }
+                    System.out.println("DEBUG: Username/password format, password: " + password);
+                    if (!password.isEmpty()) {
+                        config.setPassword(RedisPassword.of(password));
+                        System.out.println("DEBUG: Password set successfully");
+                    }
+                }
             }
+            
             return config;
         }
         
+        System.out.println("DEBUG: Failed to parse URL, using default configuration");
         // 파싱 실패 시 기본값
         return new RedisStandaloneConfiguration("localhost", 6379);
     }

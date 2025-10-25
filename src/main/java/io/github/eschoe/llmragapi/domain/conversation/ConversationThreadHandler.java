@@ -29,8 +29,12 @@ public class ConversationThreadHandler {
                 .flatMap(body -> {
                     final String sessionId = sessionUtil.extractSessionId(request);
                     
+                    System.out.println("[ConversationThreadHandler] Received body: " + body);
+                    System.out.println("[ConversationThreadHandler] Session ID: " + sessionId);
+                    
                     try {
                         CreateThreadRequest createRequest = objectMapper.readValue(body, CreateThreadRequest.class);
+                        System.out.println("[ConversationThreadHandler] Parsed request - title: " + createRequest.getTitle() + ", description: " + createRequest.getDescription());
                         
                         return threadService.createThread(sessionId, createRequest.getTitle())
                                 .flatMap(thread -> ServerResponse.ok()
@@ -158,7 +162,25 @@ public class ConversationThreadHandler {
                 .then(ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("X-Session-ID", sessionId)
-                        .bodyValue("Thread deleted successfully"));
+                        .bodyValue("Thread deleted successfully"))
+                .onErrorResume(IllegalArgumentException.class, error -> 
+                    ServerResponse.status(404)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(new DetailedErrorResponse(
+                                    "THREAD_NOT_FOUND",
+                                    "대화 스레드를 찾을 수 없습니다.",
+                                    "Thread ID: " + threadId,
+                                    sessionId
+                            )))
+                .onErrorResume(RuntimeException.class, error -> 
+                    ServerResponse.status(500)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(new DetailedErrorResponse(
+                                    "REDIS_CONNECTION_ERROR",
+                                    "Redis 연결에 실패했습니다.",
+                                    error.getMessage(),
+                                    sessionId
+                            )));
     }
 
     // Request DTOs

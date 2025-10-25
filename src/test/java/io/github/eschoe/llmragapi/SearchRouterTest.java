@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-        "spring.main.web-application-type=reactive"
+        "spring.main.web-application-type=reactive",
+        "spring.config.import=classpath:application-test.yaml"
 })
 class SearchRouterTest {
 

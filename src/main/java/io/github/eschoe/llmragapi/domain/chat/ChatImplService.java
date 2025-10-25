@@ -162,7 +162,7 @@ public class ChatImplService implements ChatService {
                 ? request.getConfig().getTopK() : 5;
 
         double threshold = (request.getConfig() != null && request.getConfig().getThreshold() > 0)
-                ? request.getConfig().getThreshold() : 0.7;
+                ? request.getConfig().getThreshold() : 0.1;  // 임계값을 0.1로 더 낮춤
 
         final String ctxVersion = "ctx-v1";           // 프롬프트 스키마 버전
         final String partitionId = "global";            // 고정 파티션 키
@@ -180,21 +180,39 @@ public class ChatImplService implements ChatService {
             searchResultsMono = llmContextClient.embed(embeddingModel, llmQuery)
                     .flatMapMany(embed -> embeddingQueryDao.topKByCosine(embed, k))
                     .collectList()
-                    .map(rows -> rows.stream()
+                    .map(rows -> {
+                        System.out.println("[ChatImplService] Raw search results count: " + rows.size());
+                        if (!rows.isEmpty()) {
+                            System.out.println("[ChatImplService] Raw scores: " + 
+                                rows.stream().map(r -> r.getScore()).collect(Collectors.toList()));
+                        }
+                        return rows.stream()
+                            .peek(r -> System.out.println("[ChatImplService] Filtering: score=" + r.getScore() + ", threshold=" + threshold + ", pass=" + (r.getScore() != null && r.getScore() >= threshold)))
                             .filter(r -> r.getScore() != null && r.getScore() >= threshold)
                             .map(r -> new SearchResult(
-                                    String.valueOf(r.getId()),
-                                    r.getContent(),
-                                    r.getScore() != null ? r.getScore() : 0.0,
-                                    Map.of(
-                                            "title", r.getTitle() != null ? r.getTitle() : "",
-                                            "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : ""
-                                    ),
-                                    "database"))
-                            .collect(Collectors.toList()));
+                                String.valueOf(r.getId()),
+                                r.getContent(),
+                                r.getScore() != null ? r.getScore() : 0.0,
+                                Map.of(
+                                    "title", r.getTitle() != null ? r.getTitle() : "",
+                                    "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : ""
+                                ),
+                                "database"))
+                            .collect(Collectors.toList());
+                    });
         }
 
         return searchResultsMono.flatMap(searchResults -> {
+
+            // 디버그 로그 추가
+            System.out.println("[ChatImplService] Search results count: " + searchResults.size());
+            if (!searchResults.isEmpty()) {
+                System.out.println("[ChatImplService] Top result score: " + searchResults.get(0).getScore());
+                System.out.println("[ChatImplService] Top result content preview: " + 
+                    (searchResults.get(0).getContent().length() > 100 ? 
+                     searchResults.get(0).getContent().substring(0, 100) + "..." : 
+                     searchResults.get(0).getContent()));
+            }
 
             String contextBlock = searchResults.isEmpty()
                     ? "- (관련 컨텍스트를 찾지 못했습니다. 일반 지식으로만 답변하세요.)"
@@ -220,6 +238,18 @@ public class ChatImplService implements ChatService {
 
                         String systemPrompt = LlmConstants.SYSTEM_PROMPT;
                         String userPrompt = "QUESTION:\n" + llmQuery + "\n\nCONTEXT:\n" + contextBlock + conversationContext;
+
+                        // 디버그 로그
+                        System.out.println("[ChatImplService] Search results count: " + searchResults.size());
+                        if (!searchResults.isEmpty()) {
+                            System.out.println("[ChatImplService] Average score: " + 
+                                searchResults.stream().mapToDouble(SearchResult::getScore).average().orElse(0.0));
+                            System.out.println("[ChatImplService] Top result score: " + 
+                                searchResults.get(0).getScore());
+                        }
+                        System.out.println("[ChatImplService] Context block length: " + contextBlock.length());
+                        System.out.println("[ChatImplService] User prompt preview: " + 
+                            (userPrompt.length() > 500 ? userPrompt.substring(0, 500) + "..." : userPrompt));
 
                         String ctxHash = hash.sha256(ctxVersion, systemPrompt, userPrompt);
 

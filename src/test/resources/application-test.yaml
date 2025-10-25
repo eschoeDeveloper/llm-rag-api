@@ -1,0 +1,90 @@
+server:
+  port: 0  # 랜덤 포트 사용
+
+spring:
+  application:
+    name: llm-rag-api-test
+  r2dbc:
+    url: r2dbc:h2:mem:///testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    pool:
+      max-idle-time: 30m
+      max-acquire-time: 30m
+      initial-size: 0
+      max-size: 10
+      max-life-time: 30m
+      enabled: true
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: false
+  http:
+    codecs:
+      max-in-memory-size: 2MB
+  ai:
+    openai:
+      api-key: test-key
+    anthropic:
+      api-key: test-key
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  data:
+    redis:
+      url: redis://localhost:6379
+      writer:
+        host: localhost
+        port: 6379
+        username: default
+        password: 
+      reader:
+        host: localhost
+        port: 6379
+        username: default
+        password: 
+      connect-timeout: 60
+      command-timeout: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    org.springframework.r2dbc: WARN
+    io.r2dbc.postgresql: WARN
+    org.springframework.web.reactive: WARN
+    org.springframework.web.reactive.function.client: ERROR
+    reactor.netty.http.client: ERROR
+    io.lettuce.core: ERROR
+    io.github.eschoe.llmragapi: WARN
+
+app:
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "*"
+    allowed-headers: "*"
+    allowed-credentials: true
+  llm:
+    ctx-ttl-times: 15s
+    resp-ttl-times: 6h
+    hist-ttl-times: 48h
+    hist-max: 50
+    embedding-model: text-embedding-3-small
+  document:
+    chunk-size: 1000
+    overlap-size: 100
+  rate-limit:
+    window-sec: 60
+    limit: 60
