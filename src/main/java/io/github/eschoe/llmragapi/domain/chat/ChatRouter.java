@@ -19,6 +19,7 @@ public class ChatRouter {
     RouterFunction<ServerResponse> chatRouterFunction() {
         return RouterFunctions.route()
                 .POST("/api/chat", handler::chat)
+                .OPTIONS("/api/chat", handler::handleOptions)
                 .build();
     }
 

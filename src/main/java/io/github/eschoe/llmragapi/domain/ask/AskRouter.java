@@ -19,6 +19,7 @@ public class AskRouter {
     RouterFunction<ServerResponse> askRouterFunction() {
         return RouterFunctions.route()
                 .POST("/api/ask", handler::ask)
+                .OPTIONS("/api/ask", handler::handleOptions)
                 .build();
     }
 

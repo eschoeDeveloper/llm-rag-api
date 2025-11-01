@@ -110,6 +110,14 @@ public class ChatHandler {
         }
     }
     
+    public Mono<ServerResponse> handleOptions(ServerRequest req) {
+        return ServerResponse.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Content-Type, X-Session-ID")
+                .build();
+    }
+    
     private Mono<ServerResponse> handleError(Throwable e, String sessionId) {
         String errorType = "UNKNOWN_ERROR";
         String userMessage = "알 수 없는 오류가 발생했습니다.";

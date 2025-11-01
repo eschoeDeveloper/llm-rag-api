@@ -61,4 +61,12 @@ public class AskHandler {
                 });
     }
 
+    public Mono<ServerResponse> handleOptions(ServerRequest req) {
+        return ServerResponse.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Content-Type, X-Session-ID")
+                .build();
+    }
+
 }
