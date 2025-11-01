@@ -13,9 +13,9 @@ import java.util.function.Supplier;
 @Service
 public class LlmCacheImplService implements LlmCacheService {
 
-    @Value("${app.llm.ctx-ttl-times}")
+    @Value("${app.llm.ctx-ttl-times:15s}")
     private String ctxTtlTimes;
-    @Value("${app.llm.resp-ttl-times}")
+    @Value("${app.llm.resp-ttl-times:6h}")
     private String respTtlTimes;
 
     // 쓰기(SET/DEL/락)는 반드시 마스터

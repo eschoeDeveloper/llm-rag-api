@@ -13,8 +13,8 @@ import java.time.Duration;
 @Service
 public class ChatHistoryStore {
 
-    @Value("${app.llm.hist-max}") private long historyMax;
-    @Value("${app.llm.hist-ttl-times}") private String historyTtlTimes;
+    @Value("${app.llm.hist-max:50}") private long historyMax;
+    @Value("${app.llm.hist-ttl-times:48h}") private String historyTtlTimes;
 
     private final ReactiveStringRedisTemplate redis;
     private final SimpleDurationParser parser;
