@@ -5,6 +5,8 @@ import io.github.eschoe.llmragapi.domain.rag.RAGConfig;
 import io.github.eschoe.llmragapi.global.DetailedErrorResponse;
 import io.github.eschoe.llmragapi.service.RateLimitingService;
 import io.github.eschoe.llmragapi.util.SessionUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -13,6 +15,8 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class ChatHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(ChatHandler.class);
 
     private final ChatService chatService;
     private final ObjectMapper objectMapper;
@@ -27,7 +31,14 @@ public class ChatHandler {
     }
 
     public Mono<ServerResponse> chat(ServerRequest req) {
+        logger.debug("=== CHAT REQUEST RECEIVED ===");
+        logger.debug("Method: {}", req.method());
+        logger.debug("Path: {}", req.path());
+        logger.debug("Headers: {}", req.headers().asHttpHeaders());
+        logger.debug("QueryParams: {}", req.queryParams());
+        
         return req.bodyToMono(String.class)
+                .doOnNext(body -> logger.debug("Request body length: {}", body != null ? body.length() : 0))
                 .flatMap(body -> {
                     final String sessionId = sessionUtil.extractSessionId(req);
                     

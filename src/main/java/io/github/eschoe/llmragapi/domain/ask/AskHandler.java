@@ -2,6 +2,8 @@ package io.github.eschoe.llmragapi.domain.ask;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.eschoe.llmragapi.global.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -13,6 +15,8 @@ import java.time.Instant;
 @Component
 public class AskHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(AskHandler.class);
+
     private final AskService askService;
     private final ObjectMapper objectMapper;
 
@@ -22,7 +26,14 @@ public class AskHandler {
     }
 
     public Mono<ServerResponse> ask(ServerRequest req) {
+        logger.debug("=== ASK REQUEST RECEIVED ===");
+        logger.debug("Method: {}", req.method());
+        logger.debug("Path: {}", req.path());
+        logger.debug("Headers: {}", req.headers().asHttpHeaders());
+        logger.debug("QueryParams: {}", req.queryParams());
+        
         return req.bodyToMono(String.class)
+                .doOnNext(body -> logger.debug("Request body length: {}", body != null ? body.length() : 0))
                 .flatMap(body -> {
                     try {
                         // JSON 파싱 시도

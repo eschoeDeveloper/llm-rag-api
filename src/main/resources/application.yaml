@@ -65,17 +65,26 @@ logging:
     org.springframework.r2dbc: DEBUG
     io.r2dbc.postgresql: DEBUG
     org.springframework.web.reactive: DEBUG
-    org.springframework.web.reactive.function.client: ERROR
-    reactor.netty.http.client: ERROR
+    org.springframework.web.reactive.function.client: DEBUG
+    org.springframework.web.reactive.function.server: DEBUG
+    org.springframework.web.cors: DEBUG
+    reactor.netty.http: DEBUG
+    reactor.netty.http.client: DEBUG
     io.lettuce.core: ERROR
-    io.github.eschoe.llmragapi: ERROR
+    io.github.eschoe.llmragapi: INFO
+    io.github.eschoe.llmragapi.domain.chat: DEBUG
+    io.github.eschoe.llmragapi.domain.ask: DEBUG
+    io.github.eschoe.llmragapi.config: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
 app:
   cors:
-    allowed-origins: ${ALLOW_ORIGINS}
-    allowed-methods: ${ALLOW_METHODS}
-    allowed-headers: ${ALLOW_HEADERS}
-    allowed-credentials: true
+    allowed-origins: ${ALLOW_ORIGINS:*}
+    allowed-methods: ${ALLOW_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
+    allowed-headers: ${ALLOW_HEADERS:*}
+    allowed-credentials: ${ALLOW_CREDENTIALS:true}
   llm:
     ctx-ttl-times: 15s
     resp-ttl-times: 6h
