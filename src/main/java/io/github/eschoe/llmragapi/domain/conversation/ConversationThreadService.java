@@ -56,7 +56,10 @@ public class ConversationThreadService {
                     logger.error("Redis error getting thread {}: {}", threadId, throwable.getMessage());
                     return new RuntimeException("Redis connection failed", throwable);
                 })
-                .onErrorReturn(null);
+                .onErrorResume(throwable -> {
+                    logger.warn("Thread not found or error occurred for thread {}: {}", threadId, throwable.getMessage());
+                    return Mono.empty();
+                });
     }
 
     public Flux<ConversationThread> getUserThreads(String sessionId) {
