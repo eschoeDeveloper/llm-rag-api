@@ -5,12 +5,16 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
+import java.util.Arrays;
 
 @Configuration
 @EnableConfigurationProperties
@@ -32,17 +36,50 @@ public class WebFluxConfig {
 
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-
-                registry.addMapping("/**")
-                        .allowedOrigins(allowedOrigins.split(","))
-                        .allowedMethods(allowedMethods.split(","))
-                        .allowedHeaders(allowedHeaders.split(","))
-                        .allowCredentials(allowedCredentials);
-
+                String[] origins = allowedOrigins.split(",");
+                // "*"와 credentials를 함께 사용할 수 없으므로 처리
+                if (allowedOrigins.equals("*")) {
+                    registry.addMapping("/**")
+                            .allowedOriginPatterns("*")
+                            .allowedMethods(allowedMethods.split(","))
+                            .allowedHeaders(allowedHeaders.split(","))
+                            .maxAge(3600);
+                } else {
+                    registry.addMapping("/**")
+                            .allowedOrigins(origins)
+                            .allowedMethods(allowedMethods.split(","))
+                            .allowedHeaders(allowedHeaders.split(","))
+                            .allowCredentials(allowedCredentials)
+                            .maxAge(3600);
+                }
             }
 
         };
 
+    }
+
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowCredentials(false); // "*" origin과 함께 사용할 수 없음
+        
+        // "*" 처리
+        if (allowedOrigins.equals("*")) {
+            corsConfig.addAllowedOriginPattern("*");
+        } else {
+            corsConfig.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+            corsConfig.setAllowCredentials(allowedCredentials);
+        }
+        
+        corsConfig.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
+        corsConfig.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
+        corsConfig.addExposedHeader("X-Session-ID");
+        corsConfig.setMaxAge(3600L);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+        
+        return new CorsWebFilter(source);
     }
 
     @Bean

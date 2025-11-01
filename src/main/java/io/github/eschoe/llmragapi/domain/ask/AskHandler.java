@@ -62,10 +62,12 @@ public class AskHandler {
     }
 
     public Mono<ServerResponse> handleOptions(ServerRequest req) {
+        String origin = req.headers().firstHeader("Origin");
         return ServerResponse.ok()
-                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Origin", origin != null ? origin : "*")
                 .header("Access-Control-Allow-Methods", "POST, OPTIONS")
                 .header("Access-Control-Allow-Headers", "Content-Type, X-Session-ID")
+                .header("Access-Control-Max-Age", "3600")
                 .build();
     }
 
