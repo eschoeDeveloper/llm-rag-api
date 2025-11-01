@@ -29,12 +29,8 @@ public class ConversationThreadHandler {
                 .flatMap(body -> {
                     final String sessionId = sessionUtil.extractSessionId(request);
                     
-                    System.out.println("[ConversationThreadHandler] Received body: " + body);
-                    System.out.println("[ConversationThreadHandler] Session ID: " + sessionId);
-                    
                     try {
                         CreateThreadRequest createRequest = objectMapper.readValue(body, CreateThreadRequest.class);
-                        System.out.println("[ConversationThreadHandler] Parsed request - title: " + createRequest.getTitle() + ", description: " + createRequest.getDescription());
                         
                         return threadService.createThread(sessionId, createRequest.getTitle())
                                 .flatMap(thread -> ServerResponse.ok()

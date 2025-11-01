@@ -18,10 +18,16 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.*;
 
+<<<<<<< HEAD
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
         "spring.main.web-application-type=reactive",
         "spring.config.import=classpath:application-test.yaml"
+=======
+@SpringBootTest
+@TestPropertySource(properties = {
+        "spring.main.web-application-type=reactive"
+>>>>>>> 78596e51562a16aadf050c10efcc89427d22723c
 })
 class AskRouterTest {
 

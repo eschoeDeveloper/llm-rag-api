@@ -1,13 +1,13 @@
 package io.github.eschoe.llmragapi.domain.conversation;
 
 import io.github.eschoe.llmragapi.domain.history.ChatHistoryStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -55,7 +55,8 @@ public class ConversationThreadService {
                 .onErrorMap(throwable -> {
                     logger.error("Redis error getting thread {}: {}", threadId, throwable.getMessage());
                     return new RuntimeException("Redis connection failed", throwable);
-                });
+                })
+                .onErrorReturn(null);
     }
 
     public Flux<ConversationThread> getUserThreads(String sessionId) {
@@ -143,17 +144,10 @@ public class ConversationThreadService {
     }
 
     public Mono<Void> deleteThread(String threadId) {
-        String key = "thread:" + threadId;
-        
-        return redis.opsForValue().get(key)
-                .flatMap(threadJson -> {
-                    if (threadJson == null || threadJson.isEmpty()) {
-                        return Mono.error(new IllegalArgumentException("Thread not found"));
-                    }
-                    
-                    ConversationThread thread = parseThread(threadJson);
+        return getThread(threadId)
+                .flatMap(thread -> {
                     if (thread == null) {
-                        return Mono.error(new IllegalArgumentException("Thread data corrupted"));
+                        return Mono.error(new IllegalArgumentException("Thread not found"));
                     }
                     
                     thread.setStatus(ConversationThread.ThreadStatus.DELETED);
@@ -165,7 +159,7 @@ public class ConversationThreadService {
                     if (throwable instanceof IllegalArgumentException) {
                         return throwable; // Thread not found or corrupted - pass through
                     }
-                    System.err.println("[ConversationThreadService] Redis error deleting thread " + threadId + ": " + throwable.getMessage());
+                    logger.error("Redis error deleting thread {}: {}", threadId, throwable.getMessage());
                     return new RuntimeException("Redis connection failed", throwable);
                 })
                 .then();
@@ -286,6 +280,7 @@ public class ConversationThreadService {
                     msg.getTimestamp().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 ))
                 .collect(Collectors.joining(",", "[", "]"));
+
         }
         
         return String.format(
@@ -399,7 +394,7 @@ public class ConversationThreadService {
             
             return message;
         } catch (Exception e) {
-            System.err.println("[ConversationThreadService] Error parsing message: " + e.getMessage());
+            logger.error("Error parsing message: {}", e.getMessage());
             return null;
         }
     }

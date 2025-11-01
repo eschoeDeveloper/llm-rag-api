@@ -1,0 +1,90 @@
+server:
+  port: 8080
+  shutdown: graceful
+  max-http-request-header-size: 8KB
+
+spring:
+  application:
+    name: llm-rag-api
+  r2dbc:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    pool:
+      max-idle-time: 30m
+      max-acquire-time: 30m
+      initial-size: 0
+      max-size: 1000
+      max-life-time: 30m
+      enabled: true
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: false
+  http:
+    codecs:
+      max-in-memory-size: 2MB
+  ai:
+    openai:
+      api-key: ${OPEN_AI_KEY}
+    anthropic:
+      api-key:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  data:
+    redis:
+      url: ${REDIS_URL}
+      writer:
+        host: ${REDIS_WRITER_HOST}
+        port: ${REDIS_WRITER_PORT}
+        username: default
+        password: ${REDIS_WRITER_PASSWORD}
+      reader:
+        host: ${REDIS_READER_HOST}
+        port: ${REDIS_READER_PORT}
+        username: default
+        password: ${REDIS_READER_PASSWORD}
+      connect-timeout: 60
+      command-timeout: 30
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    org.springframework.r2dbc: DEBUG
+    io.r2dbc.postgresql: DEBUG
+    org.springframework.web.reactive: DEBUG
+    org.springframework.web.reactive.function.client: ERROR
+    reactor.netty.http.client: ERROR
+    io.lettuce.core: ERROR
+    io.github.eschoe.llmragapi: ERROR
+
+app:
+  cors:
+    allowed-origins: ${ALLOW_ORIGINS}
+    allowed-methods: ${ALLOW_METHODS}
+    allowed-headers: ${ALLOW_HEADERS}
+    allowed-credentials: true
+  llm:
+    ctx-ttl-times: 15s
+    resp-ttl-times: 6h
+    hist-ttl-times: 48h
+    hist-max: 50
+    embedding-model: text-embedding-3-small
+  document:
+    chunk-size: 1000
+    overlap-size: 100
+  rate-limit:
+    window-sec: 60
+    limit: 60
