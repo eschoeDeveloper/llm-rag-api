@@ -61,11 +61,11 @@ public class WebFluxConfig {
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowCredentials(false); // "*" origin과 함께 사용할 수 없음
         
         // "*" 처리
         if (allowedOrigins.equals("*")) {
             corsConfig.addAllowedOriginPattern("*");
+            corsConfig.setAllowCredentials(false); // "*" origin과 함께 사용할 수 없음
         } else {
             corsConfig.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
             corsConfig.setAllowCredentials(allowedCredentials);
