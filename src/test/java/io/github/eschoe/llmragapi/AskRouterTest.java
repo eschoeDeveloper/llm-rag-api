@@ -1,10 +1,10 @@
 package io.github.eschoe.llmragapi;
 
-import io.github.eschoe.llmragapi.domain.ask.AskBody;
-import io.github.eschoe.llmragapi.domain.ask.AskRequest;
-import io.github.eschoe.llmragapi.domain.ask.AskResponse;
-import io.github.eschoe.llmragapi.domain.rag.RAGConfig;
-import io.github.eschoe.llmragapi.global.ErrorResponse;
+import io.github.eschoe.llmragapi.v1.domain.ask.AskBody;
+import io.github.eschoe.llmragapi.v1.domain.ask.AskRequest;
+import io.github.eschoe.llmragapi.v1.domain.ask.AskResponse;
+import io.github.eschoe.llmragapi.v1.domain.rag.RAGConfig;
+import io.github.eschoe.llmragapi.common.exception.ErrorResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

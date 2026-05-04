@@ -1,12 +1,14 @@
 .gradle
 HELP.md
 build/
-<<<<<<< HEAD
 target/
-=======
->>>>>>> 78596e51562a16aadf050c10efcc89427d22723c
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+### Secrets / local env ###
+.env
+.env.local
+.env.*.local
 
 ### STS ###
 .apt_generated

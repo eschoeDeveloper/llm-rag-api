@@ -1,0 +1,85 @@
+package io.github.eschoe.llmragapi.rag.retrieval;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
+
+import java.time.OffsetDateTime;
+
+@Table(name = "embeddings", schema = "chatbot")
+public class EmbeddingRow {
+
+    @Id
+    private Long id;
+    private String title;
+    private String content;
+    // r2dbc는 배열/json 변환 허용 -> 간단한 float[]으로 관리
+    private Float[] embedding;
+
+    // 벡터 검색 결과의 유사도 점수 (쿼리 시에만 사용)
+    private Double score;
+
+    @Column("created_at")
+    private OffsetDateTime createdAt;
+
+    @Column("document_id")
+    private String documentId;
+
+    @Column("chunk_index")
+    private Integer chunkIndex;
+
+    public String getDocumentId() { return documentId; }
+    public void setDocumentId(String documentId) { this.documentId = documentId; }
+
+    public Integer getChunkIndex() { return chunkIndex; }
+    public void setChunkIndex(Integer chunkIndex) { this.chunkIndex = chunkIndex; }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
+    }
+
+    public Float[] getEmbedding() {
+        return embedding;
+    }
+
+    public void setEmbedding(Float[] embedding) {
+        this.embedding = embedding;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+}

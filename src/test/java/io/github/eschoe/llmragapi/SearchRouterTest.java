@@ -1,10 +1,10 @@
 package io.github.eschoe.llmragapi;
 
-import io.github.eschoe.llmragapi.domain.search.SearchBody;
-import io.github.eschoe.llmragapi.domain.search.SearchRequest;
-import io.github.eschoe.llmragapi.domain.search.SearchResponse;
-import io.github.eschoe.llmragapi.domain.search.TopKCosine;
-import io.github.eschoe.llmragapi.global.ErrorResponse;
+import io.github.eschoe.llmragapi.v1.domain.search.SearchBody;
+import io.github.eschoe.llmragapi.v1.domain.search.SearchRequest;
+import io.github.eschoe.llmragapi.v1.domain.search.SearchResponse;
+import io.github.eschoe.llmragapi.v1.domain.search.TopKCosine;
+import io.github.eschoe.llmragapi.common.exception.ErrorResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

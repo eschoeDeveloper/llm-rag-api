@@ -1,0 +1,87 @@
+package io.github.eschoe.llmragapi.ask;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.eschoe.llmragapi.common.exception.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Mono;
+
+import java.time.Instant;
+
+@Component
+public class AskHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(AskHandler.class);
+
+    private final AskService askService;
+    private final ObjectMapper objectMapper;
+
+    public AskHandler(AskService askService, ObjectMapper objectMapper) {
+        this.askService = askService;
+        this.objectMapper = objectMapper;
+    }
+
+    public Mono<ServerResponse> ask(ServerRequest req) {
+        logger.debug("=== ASK REQUEST RECEIVED ===");
+        logger.debug("Method: {}", req.method());
+        logger.debug("Path: {}", req.path());
+        logger.debug("Headers: {}", req.headers().asHttpHeaders());
+        logger.debug("QueryParams: {}", req.queryParams());
+        
+        return req.bodyToMono(String.class)
+                .doOnNext(body -> logger.debug("Request body length: {}", body != null ? body.length() : 0))
+                .flatMap(body -> {
+                    // 두 가지 입력 형식 호환:
+                    //   1) AskRequest (신규: query + config + sessionId) → askEnhanced
+                    //   2) AskBody    (레거시: query/provider/model)     → askLegacy
+                    // 첫 파싱이 실패하면 두 번째 시도 — 의도된 fallthrough 라 에러 무음 처리.
+                    try {
+                        AskRequest askRequest = objectMapper.readValue(body, AskRequest.class);
+                        if (askRequest.getConfig() != null) {
+                            return askService.askEnhanced(askRequest)
+                                    .flatMap(response -> ServerResponse.ok()
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .header("X-Session-ID", askRequest.getSessionId() != null ? askRequest.getSessionId() : "default-session")
+                                            .bodyValue(response));
+                        }
+                    } catch (Exception ignored) {
+                        // 신규 형식 아님 → 레거시 형식 시도
+                    }
+
+                    try {
+                        // 기존 방식으로 파싱 시도
+                        AskBody askBody = objectMapper.readValue(body, AskBody.class);
+                        return askService.askLegacy(askBody)
+                                .flatMap(txt -> ServerResponse.ok()
+                                        .contentType(MediaType.TEXT_PLAIN)
+                                        .bodyValue(txt));
+                    } catch (Exception e) {
+                        return ServerResponse.badRequest()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(
+                                        new ErrorResponse("Invalid request format", Instant.now())
+                                );
+                    }
+                })
+                .onErrorResume(e -> {
+                    return ServerResponse.badRequest()
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(new ErrorResponse(e.getMessage(), Instant.now()));
+                });
+    }
+
+    public Mono<ServerResponse> handleOptions(ServerRequest req) {
+        String origin = req.headers().firstHeader("Origin");
+        return ServerResponse.ok()
+                .header("Access-Control-Allow-Origin", origin != null ? origin : "*")
+                .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Content-Type, X-Session-ID")
+                .header("Access-Control-Max-Age", "3600")
+                .build();
+    }
+
+}

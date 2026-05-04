@@ -1,12 +1,12 @@
 package io.github.eschoe.llmragapi;
 
 
-import io.github.eschoe.llmragapi.domain.chat.ChatBody;
-import io.github.eschoe.llmragapi.domain.chat.ChatRequest;
-import io.github.eschoe.llmragapi.domain.chat.ChatResponse;
-import io.github.eschoe.llmragapi.domain.rag.RAGConfig;
-import io.github.eschoe.llmragapi.domain.search.SearchResult;
-import io.github.eschoe.llmragapi.global.ErrorResponse;
+import io.github.eschoe.llmragapi.v1.domain.chat.ChatBody;
+import io.github.eschoe.llmragapi.v1.domain.chat.ChatRequest;
+import io.github.eschoe.llmragapi.v1.domain.chat.ChatResponse;
+import io.github.eschoe.llmragapi.v1.domain.rag.RAGConfig;
+import io.github.eschoe.llmragapi.v1.domain.search.SearchResult;
+import io.github.eschoe.llmragapi.common.exception.ErrorResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

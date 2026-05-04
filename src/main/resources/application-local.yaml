@@ -1,0 +1,23 @@
+# 로컬 개발 + OCR 활성화 프로파일
+# 활성화 방법:
+#   1. SPRING_PROFILES_ACTIVE=local 환경변수 설정
+#   2. 또는 IntelliJ Run Config 의 "Active profiles" 에 local 입력
+#   3. 또는 ./run-local.ps1 실행
+
+app:
+  parsing:
+    pdf:
+      # Tesseract 설치 후 켬. 텍스트가 비어 있을 때만 OCR 실행 (빠름).
+      ocr-strategy: AUTO
+      # 한국어 슬라이드 PDF 등 OCR 한계가 명확한 경우 GPT-4o vision으로 추출.
+      # 페이지당 약 $0.005 발생. 끄려면 false.
+      vision-fallback: true
+  tesseract:
+    language: kor+eng
+
+# RAG 디버그 로그 — reranker / probe / candidate scores 확인용
+logging:
+  level:
+    io.github.eschoe.llmragapi.chat: DEBUG
+    io.github.eschoe.llmragapi.rag.rerank: DEBUG
+    io.github.eschoe.llmragapi.document.parsing: DEBUG
