@@ -41,10 +41,20 @@ public class SimpleRedisConfig {
     public LettuceConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config;
         
-        // REDIS_URL이 있으면 파싱해서 사용
+        // REDIS_URL 이 있으면 파싱해서 사용.
+        //
+        // 비번 처리 전략:
+        //   - URL 에 인증 정보 포함 (redis://:pass@host:port) → URL 비번 사용 (운영: Heroku/Upstash)
+        //   - URL 에 인증 없음 (redis://host:port)            → writerPassword 로 fallback (로컬 dev)
+        //
+        // 절대 무조건 writerPassword 로 덮어쓰지 말 것 — 운영에서 REDIS_URL 과 WRITER_*
+        // 가 다른 인스턴스를 가리키면 호스트는 A, 비번은 B 라 인증이 무조건 실패함.
         if (redisUrl != null && !redisUrl.isEmpty()) {
             config = parseRedisUrl(redisUrl);
-            config.setPassword(RedisPassword.of(writerPassword));
+            boolean urlHasAuth = redisUrl.contains("@");
+            if (!urlHasAuth && writerPassword != null && !writerPassword.isEmpty()) {
+                config.setPassword(RedisPassword.of(writerPassword));
+            }
         } else {
             // 환경 변수에서 직접 설정
             config = new RedisStandaloneConfiguration(writerHost, writerPort);
