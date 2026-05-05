@@ -7,9 +7,11 @@ spring:
   application:
     name: llm-rag-api
   r2dbc:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    # local: .env.local 의 DB_URL/USERNAME/PASSWORD 사용
+    # prod : application-prod.yaml 에서 빈 값으로 자동설정 비활성화 + R2dbcProdConfig 빈이 DATABASE_URL 파싱해서 ConnectionFactory 직접 생성
+    url: ${DB_URL:}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
     pool:
       max-idle-time: 30m
       max-acquire-time: 30m
@@ -26,9 +28,9 @@ spring:
       max-in-memory-size: 2MB
   ai:
     openai:
-      api-key: ${OPEN_AI_KEY}
+      api-key: ${OPEN_AI_KEY:}
     anthropic:
-      api-key: ${ANTHROPIC_KEY}
+      api-key: ${ANTHROPIC_KEY:}
     cohere:
       # Cohere Rerank API 키. 비어 있으면 NoOpReranker 사용.
       api-key: ${COHERE_API_KEY:}
@@ -39,20 +41,22 @@ spring:
       max-request-size: 10MB
   data:
     redis:
-      url: ${REDIS_URL}
+      # SimpleRedisConfig 가 REDIS_URL 우선 사용 (URL 에 인증 포함 시 그대로, 없으면 writerPassword fallback).
+      # WRITER/READER 분리는 레거시 호환용 — 운영에선 REDIS_URL 만 등록해도 충분.
+      url: ${REDIS_URL:}
       writer:
-        host: ${REDIS_WRITER_HOST}
-        port: ${REDIS_WRITER_PORT}
+        host: ${REDIS_WRITER_HOST:}
+        port: ${REDIS_WRITER_PORT:6379}
         username: default
-        password: ${REDIS_WRITER_PASSWORD}
+        password: ${REDIS_WRITER_PASSWORD:}
       reader:
-        host: ${REDIS_READER_HOST}
-        port: ${REDIS_READER_PORT}
+        host: ${REDIS_READER_HOST:}
+        port: ${REDIS_READER_PORT:6379}
         username: default
-        password: ${REDIS_READER_PASSWORD}
+        password: ${REDIS_READER_PASSWORD:}
       connect-timeout: 60
       command-timeout: 30
-      password: ${REDIS_WRITER_PASSWORD}
+      password: ${REDIS_WRITER_PASSWORD:}
 
 
 management:

@@ -70,6 +70,13 @@ public class ConversationThreadService {
                 .sort((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()));
     }
 
+    /**
+     * 스레드당 메시지 최대 보존 개수.
+     * 무한 누적 시 Redis payload 비대 + 매 chat 응답 직렬화 비용 폭증.
+     * 토큰 예산 단계에서 어차피 1/4 만 사용하므로 100 이상 보존은 가성비 0.
+     */
+    private static final int MAX_MESSAGES_PER_THREAD = 100;
+
     public Mono<ConversationThread> addMessage(String threadId,
                                                String content,
                                                ConversationThread.Message.MessageRole role) {
@@ -78,7 +85,18 @@ public class ConversationThreadService {
             msg.setId(UUID.randomUUID().toString());
             if (thread.getMessages() == null) thread.setMessages(new ArrayList<>());
             thread.getMessages().add(msg);
+            trimMessages(thread);
         });
+    }
+
+    /** 메시지 수가 한도 초과 시 가장 오래된 것부터 제거 (FIFO). */
+    private void trimMessages(ConversationThread thread) {
+        List<ConversationThread.Message> msgs = thread.getMessages();
+        if (msgs == null) return;
+        int excess = msgs.size() - MAX_MESSAGES_PER_THREAD;
+        if (excess > 0) {
+            msgs.subList(0, excess).clear();
+        }
     }
 
     /**
@@ -98,7 +116,8 @@ public class ConversationThreadService {
     public Mono<ConversationThread> threadChat(String threadId,
                                                String query,
                                                String mode,
-                                               RAGConfig config) {
+                                               RAGConfig config,
+                                               String customPrompt) {
         if (query == null || query.isBlank()) {
             return Mono.error(new IllegalArgumentException("query is required"));
         }
@@ -113,10 +132,11 @@ public class ConversationThreadService {
                     userMsg.setId(UUID.randomUUID().toString());
                     if (thread.getMessages() == null) thread.setMessages(new ArrayList<>());
                     thread.getMessages().add(userMsg);
+                    trimMessages(thread);
                     thread.setUpdatedAt(LocalDateTime.now());
 
                     return repository.save(thread)
-                            .flatMap(saved -> invokeLlm(query, mode, config, sessionId, useRag)
+                            .flatMap(saved -> invokeLlm(query, mode, config, sessionId, useRag, customPrompt)
                                     .onErrorResume(e -> {
                                         log.warn("[Thread] LLM 호출 실패: {}", e.getMessage());
                                         Map<String, Object> errMeta = new HashMap<>();
@@ -127,13 +147,16 @@ public class ConversationThreadService {
                 });
     }
 
-    private Mono<LlmOutcome> invokeLlm(String query, String mode, RAGConfig config, String sessionId, boolean useRag) {
+    private Mono<LlmOutcome> invokeLlm(String query, String mode, RAGConfig config, String sessionId,
+                                       boolean useRag, String customPrompt) {
         if (useRag) {
             ChatRequest req = new ChatRequest(query, null, config, sessionId);
+            req.setCustomPrompt(customPrompt);
             return chatService.chatEnhanced(req)
                     .map(r -> new LlmOutcome(r.getContent(), r.getMetadata()));
         }
         AskRequest req = new AskRequest(query, config, sessionId);
+        req.setCustomPrompt(customPrompt);
         return askService.askEnhanced(req)
                 .map(r -> new LlmOutcome(r.getContent(), r.getMetadata()));
     }
@@ -147,6 +170,7 @@ public class ConversationThreadService {
             assistantMsg.setMetadata(outcome.metadata());
         }
         thread.getMessages().add(assistantMsg);
+        trimMessages(thread);
         thread.setUpdatedAt(LocalDateTime.now());
         return repository.save(thread);
     }

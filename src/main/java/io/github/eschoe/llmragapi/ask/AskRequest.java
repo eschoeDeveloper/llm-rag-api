@@ -6,6 +6,7 @@ public class AskRequest {
     private String query;
     private RAGConfig config;
     private String sessionId;
+    private String customPrompt;
 
     public AskRequest() {}
 
@@ -23,4 +24,7 @@ public class AskRequest {
 
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+
+    public String getCustomPrompt() { return customPrompt; }
+    public void setCustomPrompt(String customPrompt) { this.customPrompt = customPrompt; }
 }

@@ -10,8 +10,6 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
-import org.springframework.web.reactive.config.CorsRegistry;
-import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
@@ -33,34 +31,8 @@ public class WebFluxConfig {
     @Value("${app.cors.allowed-credentials:true}")
     private boolean allowedCredentials;
 
-    @Bean
-    public WebFluxConfigurer webFluxConfigurer() {
-
-        return new WebFluxConfigurer() {
-
-            
-            public void addCorsMappings(CorsRegistry registry) {
-                String[] origins = allowedOrigins.split(",");
-                // "*"와 credentials를 함께 사용할 수 없으므로 처리
-                if (allowedOrigins.equals("*")) {
-                    registry.addMapping("/**")
-                            .allowedOriginPatterns("*")
-                            .allowedMethods(allowedMethods.split(","))
-                            .allowedHeaders(allowedHeaders.split(","))
-                            .maxAge(3600);
-                } else {
-                    registry.addMapping("/**")
-                            .allowedOrigins(origins)
-                            .allowedMethods(allowedMethods.split(","))
-                            .allowedHeaders(allowedHeaders.split(","))
-                            .allowCredentials(allowedCredentials)
-                            .maxAge(3600);
-                }
-            }
-
-        };
-
-    }
+    // CORS 단일 정의 — CorsWebFilter 만 사용. 이전엔 WebFluxConfigurer.addCorsMappings 와 중복되어
+    // preflight 응답 헤더가 두 번 들어가거나 우선순위 모호한 문제 있어 제거.
 
     @Bean
     public CorsWebFilter corsWebFilter() {
@@ -99,7 +71,9 @@ public class WebFluxConfig {
     public WebClient webClient(WebClient.Builder builder) {
         return builder
                 .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
-                        .responseTimeout(Duration.ofSeconds(8000))
+                        // LLM(OpenAI/Anthropic/Cohere) 응답 대기 한도. 60초가 평균적인 long-tail 커버.
+                        // 이전 값 8000초 = 2시간 17분, 외부 API 응답 안 올 때 connection 영구 점유 위험.
+                        .responseTimeout(Duration.ofSeconds(60))
                         .followRedirect(true)
                 ))
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10*1024*1024))

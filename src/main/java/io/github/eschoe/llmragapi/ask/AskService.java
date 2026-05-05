@@ -61,7 +61,10 @@ public class AskService {
 
         String llmProvider = LlmConstants.DEFAULT_PROVIDER;
         String llmModel = LlmRagUtil.chooseModel(llmProvider, null);
-        String systemPrompt = LlmConstants.SYSTEM_PROMPT;
+        // customPrompt 가 있으면 기본 SYSTEM_PROMPT 대신 사용
+        String systemPrompt = (ask.getCustomPrompt() != null && !ask.getCustomPrompt().isBlank())
+                ? ask.getCustomPrompt()
+                : LlmConstants.SYSTEM_PROMPT;
 
         String sessionId = ask.getSessionId() != null ? ask.getSessionId() : "default-session";
 

@@ -9,9 +9,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.core.ParameterizedTypeReference;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import java.util.Map;
 
 @Component
 public class ChatHandler {
@@ -121,6 +126,44 @@ public class ChatHandler {
         }
     }
     
+    /**
+     * 스트리밍 RAG 채팅 — text/event-stream 응답.
+     * 토큰 단위로 brand-new ServerSentEvent 흐름을 클라이언트로 push.
+     */
+    public Mono<ServerResponse> chatStream(ServerRequest req) {
+        final String sessionId = sessionUtil.extractSessionId(req);
+        return req.bodyToMono(String.class)
+                .flatMap(body -> {
+                    try {
+                        ChatRequest chatRequest = objectMapper.readValue(body, ChatRequest.class);
+                        if (chatRequest.getSessionId() == null) {
+                            chatRequest.setSessionId(sessionId);
+                        }
+                        Flux<ServerSentEvent<StreamEvent>> stream = chatService.chatStream(chatRequest)
+                                .map(payload -> ServerSentEvent.<StreamEvent>builder()
+                                        .data(payload)
+                                        .build())
+                                .onErrorResume(e -> Flux.just(ServerSentEvent.<StreamEvent>builder()
+                                        .data(StreamEvent.error(String.valueOf(e.getMessage())))
+                                        .build()));
+
+                        return ServerResponse.ok()
+                                .contentType(MediaType.TEXT_EVENT_STREAM)
+                                .header("X-Session-ID", sessionId)
+                                .body(stream, new ParameterizedTypeReference<ServerSentEvent<StreamEvent>>() {});
+                    } catch (Exception e) {
+                        return ServerResponse.badRequest()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(new DetailedErrorResponse(
+                                        "INVALID_REQUEST_FORMAT",
+                                        "요청 형식이 올바르지 않습니다.",
+                                        e.getMessage(),
+                                        sessionId
+                                ));
+                    }
+                });
+    }
+
     public Mono<ServerResponse> handleOptions(ServerRequest req) {
         String origin = req.headers().firstHeader("Origin");
         return ServerResponse.ok()

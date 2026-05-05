@@ -130,7 +130,8 @@ public class ConversationThreadHandler {
                                         threadId,
                                         chatRequest.getQuery(),
                                         chatRequest.getMode(),
-                                        chatRequest.getConfig())
+                                        chatRequest.getConfig(),
+                                        chatRequest.getCustomPrompt())
                                 .flatMap(thread -> ServerResponse.ok()
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .header("X-Session-ID", sessionId)
@@ -256,6 +257,7 @@ public class ConversationThreadHandler {
         private String query;
         private String mode; // "chat" | "ask"
         private RAGConfig config;
+        private String customPrompt;
 
         public String getQuery() { return query; }
         public void setQuery(String query) { this.query = query; }
@@ -263,5 +265,7 @@ public class ConversationThreadHandler {
         public void setMode(String mode) { this.mode = mode; }
         public RAGConfig getConfig() { return config; }
         public void setConfig(RAGConfig config) { this.config = config; }
+        public String getCustomPrompt() { return customPrompt; }
+        public void setCustomPrompt(String customPrompt) { this.customPrompt = customPrompt; }
     }
 }

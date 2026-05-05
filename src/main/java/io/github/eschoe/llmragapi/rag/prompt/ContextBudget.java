@@ -55,6 +55,10 @@ public class ContextBudget {
      *
      * 이유: rerank 로 score desc 정렬된 상태라 위쪽이 더 중요한 청크.
      * 큰 청크 하나 버리고 작은 거 여러 개 쑤셔 넣으면 답변 품질이 떨어짐.
+     *
+     * Edge case: 첫 청크 자체가 예산을 초과하면 빈 결과 대신 truncate 해서라도 1개는 보존.
+     * 빈 결과 → "관련 컨텍스트를 찾지 못했습니다" 메시지로 떨어져 사용자가 정상 답변을 못 받음.
+     * 일부라도 있는 게 무 반환보다 답변 품질에 도움.
      */
     public List<SearchResult> fit(List<SearchResult> candidates, int maxTokens) {
         if (candidates == null || candidates.isEmpty() || maxTokens <= 0) {
@@ -64,7 +68,16 @@ public class ContextBudget {
         int used = 0;
         for (SearchResult r : candidates) {
             int cost = estimateTokens(r.getContent());
-            if (used + cost > maxTokens) break;
+            if (used + cost > maxTokens) {
+                // 첫 청크부터 초과 → truncate 해서라도 포함 (품질 보호)
+                if (kept.isEmpty()) {
+                    String truncated = truncate(r.getContent(), maxTokens);
+                    SearchResult fallback = new SearchResult(
+                            r.getId(), truncated, r.getScore(), r.getMetadata(), r.getSource());
+                    kept.add(fallback);
+                }
+                break;
+            }
             kept.add(r);
             used += cost;
         }

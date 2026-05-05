@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Base64;
 import java.util.List;
@@ -25,10 +27,12 @@ public class LlmClient {
 
     private final WebClient webClient;
     private final EmbeddingProperties embeddingProps;
+    private final ObjectMapper objectMapper;
 
-    LlmClient(WebClient.Builder builder, EmbeddingProperties embeddingProps) {
+    LlmClient(WebClient.Builder builder, EmbeddingProperties embeddingProps, ObjectMapper objectMapper) {
         this.webClient = builder.build();
         this.embeddingProps = embeddingProps;
+        this.objectMapper = objectMapper;
     }
 
     // Chat with provider-specific call
@@ -122,6 +126,60 @@ public class LlmClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(body))
                 .exchangeToMono(this::extractOpenAi);
+    }
+
+    /**
+     * OpenAI Chat Streaming — 토큰 단위로 delta content 만 emit.
+     *
+     * 응답 형식 (SSE):
+     *   data: {"choices":[{"delta":{"content":"Hello"}}]}
+     *   data: {"choices":[{"delta":{"content":" world"}}]}
+     *   data: [DONE]
+     *
+     * Spring WebClient 의 bodyToFlux(String) 는 SSE 의 data: 부분만 추출해서 line 단위 emit.
+     * [DONE] sentinel 도달 시 stream 종료.
+     *
+     * 현재 OpenAI 만 지원. Anthropic streaming 은 다른 SSE 포맷이라 추후 별도 구현.
+     */
+    public Flux<String> streamChat(String provider, String model, String system, String user) {
+        if ("anthropic".equalsIgnoreCase(provider)) {
+            return Flux.error(new UnsupportedOperationException("anthropic streaming not implemented"));
+        }
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "stream", true,
+                "messages", List.of(
+                        Map.of("role", "system", "content", system),
+                        Map.of("role", "user", "content", user)
+                )
+        );
+        return webClient.post()
+                .uri("https://api.openai.com/v1/chat/completions")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + openaiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .body(BodyInserters.fromValue(body))
+                .retrieve()
+                .bodyToFlux(String.class)
+                .takeUntil("[DONE]"::equals)
+                .filter(payload -> !"[DONE]".equals(payload))
+                .mapNotNull(this::extractDelta);
+    }
+
+    private String extractDelta(String json) {
+        try {
+            Map<?, ?> m = objectMapper.readValue(json, Map.class);
+            Object raw = m.get("choices");
+            if (!(raw instanceof List<?> choices) || choices.isEmpty()) return null;
+            Object first = choices.get(0);
+            if (!(first instanceof Map<?, ?> firstMap)) return null;
+            Object deltaObj = firstMap.get("delta");
+            if (!(deltaObj instanceof Map<?, ?> delta)) return null;
+            Object content = delta.get("content");
+            return content == null ? null : content.toString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Mono<String> extractOpenAi(ClientResponse res) {

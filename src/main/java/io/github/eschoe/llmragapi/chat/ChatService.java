@@ -3,6 +3,7 @@ package io.github.eschoe.llmragapi.chat;
 import io.github.eschoe.llmragapi.chat.history.ChatHistoryStore;
 import io.github.eschoe.llmragapi.common.helper.HashUtil;
 import io.github.eschoe.llmragapi.common.helper.LlmRagUtil;
+import io.github.eschoe.llmragapi.common.metrics.MetricsService;
 import io.github.eschoe.llmragapi.llm.LlmClient;
 import io.github.eschoe.llmragapi.llm.cache.LlmCacheService;
 import io.github.eschoe.llmragapi.llm.cache.LlmConstants;
@@ -11,11 +12,13 @@ import io.github.eschoe.llmragapi.rag.config.EmbeddingProperties;
 import io.github.eschoe.llmragapi.rag.prompt.ContextBudget;
 import io.github.eschoe.llmragapi.rag.rerank.Reranker;
 import io.github.eschoe.llmragapi.rag.retrieval.EmbeddingQueryDao;
+import io.github.eschoe.llmragapi.search.Citation;
 import io.github.eschoe.llmragapi.search.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -39,6 +42,7 @@ public class ChatService {
     private final ContextBudget contextBudget;
     private final PromptSerializer promptSerializer;
     private final EmbeddingProperties embeddingProps;
+    private final MetricsService metrics;
 
     public ChatService(LlmCacheService cache,
                            HashUtil hash,
@@ -49,7 +53,8 @@ public class ChatService {
                            Reranker reranker,
                            ContextBudget contextBudget,
                            PromptSerializer promptSerializer,
-                           EmbeddingProperties embeddingProps) {
+                           EmbeddingProperties embeddingProps,
+                           MetricsService metrics) {
         this.cache = cache;
         this.hash = hash;
         this.llmRagUtil = llmRagUtil;
@@ -60,6 +65,7 @@ public class ChatService {
         this.contextBudget = contextBudget;
         this.promptSerializer = promptSerializer;
         this.embeddingProps = embeddingProps;
+        this.metrics = metrics;
     }
 
     
@@ -179,6 +185,7 @@ public class ChatService {
                 .flatMap(searchResults -> {
 
                     boolean retrievalEmpty = searchResults.isEmpty();
+                    if (retrievalEmpty) metrics.incr("retrieval_empty").subscribe();
                     String contextBlock;
                     if (retrievalEmpty) {
                         contextBlock = "(관련 컨텍스트를 찾지 못했습니다.)";
@@ -203,7 +210,11 @@ public class ChatService {
                                         ? ""
                                         : "\n\nPREVIOUS CONVERSATION:\n" + String.join("\n", historyMessages);
 
-                                String systemPrompt = LlmConstants.SYSTEM_PROMPT;
+                                // customPrompt 가 있으면 기본 SYSTEM_PROMPT 대신 사용
+                                // (사용자가 어시스턴트 톤/제약을 직접 정의할 수 있게)
+                                String systemPrompt = (request.getCustomPrompt() != null && !request.getCustomPrompt().isBlank())
+                                        ? request.getCustomPrompt()
+                                        : LlmConstants.SYSTEM_PROMPT;
                                 String userPrompt = "QUESTION:\n" + llmQuery
                                         + "\n\nCONTEXT:\n" + contextBlock
                                         + conversationContext;
@@ -242,12 +253,10 @@ public class ChatService {
                                                                             .mapToDouble(SearchResult::getScore)
                                                                             .average().orElse(0.0),
                                                                     "retrievalEmpty", retrievalEmpty,
+                                                                    // citations 에 content 도 포함 (frontend 모달에서 원본 청크 표시 — citation provenance)
+                                                                    // Citation record 사용 — Map.of() 보다 직렬화/GC 부담 적음.
                                                                     "citations", searchResults.stream()
-                                                                            .map(r -> Map.of(
-                                                                                    "documentId", r.getMetadata().getOrDefault("documentId", ""),
-                                                                                    "chunkIndex", r.getMetadata().getOrDefault("chunkIndex", 0),
-                                                                                    "title", r.getMetadata().getOrDefault("title", ""),
-                                                                                    "score", r.getScore()))
+                                                                            .map(Citation::from)
                                                                             .collect(Collectors.toList()),
                                                                     "timestamp", Instant.now(),
                                                                     "provider", llmProvider
@@ -259,4 +268,128 @@ public class ChatService {
                 });
     }
 
+    /**
+     * 스트리밍 RAG 채팅.
+     *
+     * 흐름:
+     *   1. 검색·rerank·budget 동기 처리 (chatEnhanced 와 동일)
+     *   2. citations 메타를 첫 SSE 이벤트로 emit
+     *   3. LLM 응답을 토큰 단위로 stream
+     *   4. 완료 시 history 저장 (ASSISTANT 메시지 누적)
+     *
+     * 캐싱은 생략 — 스트리밍에서는 캐시 hit 시 일괄 응답이 되어버려 UX 의도와 어긋남.
+     * 동일 prompt 재사용은 일반 chatEnhanced 엔드포인트로 유도.
+     *
+     * 이벤트 형식:
+     *   data: {"type":"meta","citations":[...]}
+     *   data: {"type":"delta","content":"안녕"}
+     *   data: {"type":"delta","content":"하세요"}
+     *   data: {"type":"done"}
+     */
+    public Flux<StreamEvent> chatStream(ChatRequest request) {
+        String llmQuery = LlmRagUtil.opt(request.getQuery());
+        if (llmQuery.isBlank()) {
+            return Flux.error(new IllegalArgumentException("query is required"));
+        }
+
+        String llmProvider = LlmConstants.DEFAULT_PROVIDER;
+        String llmModel = LlmRagUtil.chooseModel(llmProvider, null);
+
+        int k = (request.getConfig() != null && request.getConfig().getTopK() > 0)
+                ? request.getConfig().getTopK() : 5;
+        double threshold = (request.getConfig() != null && request.getConfig().getThreshold() > 0)
+                ? request.getConfig().getThreshold() : 0.1;
+        int totalBudget = (request.getConfig() != null && request.getConfig().getMaxTokens() > 0)
+                ? request.getConfig().getMaxTokens() : 4000;
+        int contextTokenBudget = totalBudget / 2;
+        int historyTokenBudget = totalBudget / 4;
+        int candidatePool = Math.max(k * 2, 10);
+        String sessionId = request.getSessionId() != null ? request.getSessionId() : "default-session";
+
+        // 1) 검색 → rerank → threshold → top-k → budget (동기 부분)
+        Mono<List<SearchResult>> retrievedMono = llmClient.embed(embeddingProps.getModel(), llmQuery)
+                .flatMapMany(embed -> embeddingQueryDao.topKByCosine(embed, candidatePool))
+                .collectList()
+                .map(rows -> rows.stream()
+                        .map(r -> new SearchResult(
+                                String.valueOf(r.getId()),
+                                r.getContent(),
+                                r.getScore() != null ? r.getScore() : 0.0,
+                                Map.of(
+                                        "title", r.getTitle() != null ? r.getTitle() : "",
+                                        "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : "",
+                                        "documentId", r.getDocumentId() != null ? r.getDocumentId() : "",
+                                        "chunkIndex", r.getChunkIndex() != null ? r.getChunkIndex() : 0
+                                ),
+                                "database"))
+                        .collect(Collectors.toList()))
+                .flatMap(rawResults -> reranker.rerank(llmQuery, rawResults))
+                .map(reranked -> reranked.stream()
+                        .filter(r -> r.getScore() >= threshold)
+                        .limit(k)
+                        .collect(Collectors.toList()))
+                .map(filtered -> contextBudget.fit(filtered, contextTokenBudget));
+
+        return retrievedMono.flatMapMany(searchResults -> {
+            // citations — Citation record list
+            List<Citation> citations = searchResults.stream()
+                    .map(Citation::from)
+                    .collect(Collectors.toList());
+
+            boolean retrievalEmpty = searchResults.isEmpty();
+            String contextBlock;
+            if (retrievalEmpty) {
+                contextBlock = "(관련 컨텍스트를 찾지 못했습니다.)";
+            } else {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < searchResults.size(); i++) {
+                    SearchResult r = searchResults.get(i);
+                    sb.append(String.format("[근거 %d] (점수: %.3f) %s%n",
+                            i + 1, r.getScore(), contextBudget.snippet(r.getContent())));
+                }
+                contextBlock = sb.toString().trim();
+            }
+
+            return chatHistoryStore.recent(sessionId, 10)
+                    .collectList()
+                    .timeout(Duration.ofSeconds(5))
+                    .onErrorReturn(List.of())
+                    .map(rawHistory -> contextBudget.fitStringsLatestFirst(rawHistory, historyTokenBudget))
+                    .flatMapMany(historyMessages -> {
+                        String conversationContext = historyMessages.isEmpty()
+                                ? ""
+                                : "\n\nPREVIOUS CONVERSATION:\n" + String.join("\n", historyMessages);
+
+                        String systemPrompt = (request.getCustomPrompt() != null && !request.getCustomPrompt().isBlank())
+                                ? request.getCustomPrompt()
+                                : LlmConstants.SYSTEM_PROMPT;
+                        String userPrompt = "QUESTION:\n" + llmQuery
+                                + "\n\nCONTEXT:\n" + contextBlock
+                                + conversationContext;
+
+                        StringBuilder accumulated = new StringBuilder();
+
+                        StreamEvent metaEvent = StreamEvent.meta(citations, retrievalEmpty, llmModel);
+
+                        Flux<StreamEvent> tokenFlux = llmClient.streamChat(llmProvider, llmModel, systemPrompt, userPrompt)
+                                .doOnNext(accumulated::append)
+                                .map(StreamEvent::delta);
+
+                        Mono<StreamEvent> doneEvent = Mono.defer(() -> {
+                            // 완료 시 history 저장
+                            String questionJson = promptSerializer.toMessageJson("user", llmQuery);
+                            String answerJson = promptSerializer.toMessageJson("assistant", accumulated.toString());
+                            return chatHistoryStore.append(sessionId, questionJson)
+                                    .then(chatHistoryStore.append(sessionId, answerJson))
+                                    .thenReturn(StreamEvent.done());
+                        });
+
+                        return Flux.concat(
+                                Flux.just(metaEvent),
+                                tokenFlux,
+                                doneEvent
+                        );
+                    });
+        });
+    }
 }

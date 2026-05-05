@@ -1,0 +1,45 @@
+# 운영 (Heroku) 프로필.
+# 활성화: SPRING_PROFILES_ACTIVE=prod 또는 Procfile 의 --spring.profiles.active=prod
+#
+# 핵심 단순화:
+#   - DATABASE_URL  하나만 등록 → R2dbcProdConfig 빈이 파싱해서 ConnectionFactory 생성
+#   - REDIS_URL     하나만 등록 → SimpleRedisConfig 가 URL 우선 처리 (writer/reader 무시)
+#   - OPEN_AI_KEY / ANTHROPIC_KEY (선택: COHERE_API_KEY)
+#   - ALLOW_ORIGINS / TESSDATA_PREFIX / PDF_OCR_STRATEGY
+#
+# 즉 운영 환경변수 4~7개로 충분.
+
+spring:
+  r2dbc:
+    # 빈 값으로 두어 R2dbcAutoConfiguration 비활성화
+    # (R2dbcProdConfig 빈이 @Primary 로 ConnectionFactory 직접 제공)
+    url: ""
+    username: ""
+    password: ""
+
+server:
+  # Heroku 가 동적 PORT 주입
+  port: ${PORT:8080}
+
+# prod 로그 — DEBUG 빼고 INFO 기본, 핵심 카테고리만 명시
+logging:
+  level:
+    root: INFO
+    org.springframework.r2dbc: WARN
+    io.r2dbc.postgresql: WARN
+    org.springframework.web.reactive: INFO
+    org.springframework.web.cors: INFO
+    reactor.netty.http: WARN
+    io.lettuce.core: ERROR
+    io.github.eschoe.llmragapi: INFO
+
+app:
+  cors:
+    # 운영에서는 와일드카드 금지 — 명시 도메인만
+    allowed-origins: ${ALLOW_ORIGINS:https://www.llmragapp.com,https://llmragapp.com}
+  parsing:
+    pdf:
+      # 운영에선 OCR 활성화 (Aptfile 로 tesseract 설치됨)
+      ocr-strategy: ${PDF_OCR_STRATEGY:AUTO}
+      # 한국어 슬라이드 PDF 등 OCR 한계 시 vision 폴백
+      vision-fallback: ${PDF_VISION_FALLBACK:true}

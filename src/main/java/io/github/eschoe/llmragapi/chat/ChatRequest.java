@@ -11,6 +11,7 @@ public class ChatRequest {
     private List<SearchResult> searchResults;
     private RAGConfig config;
     private String sessionId;  // 세션 ID 추가
+    private String customPrompt;  // 사용자 정의 시스템 프롬프트 (비어있으면 기본 SYSTEM_PROMPT)
 
     public ChatRequest() {}
 
@@ -38,4 +39,7 @@ public class ChatRequest {
 
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+
+    public String getCustomPrompt() { return customPrompt; }
+    public void setCustomPrompt(String customPrompt) { this.customPrompt = customPrompt; }
 }

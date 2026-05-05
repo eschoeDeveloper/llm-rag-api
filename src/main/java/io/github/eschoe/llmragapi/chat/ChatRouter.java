@@ -25,6 +25,7 @@ public class ChatRouter {
         logger.info("Route: POST /api/chat");
         RouterFunction<ServerResponse> router = RouterFunctions.route()
                 .POST("/api/chat", handler::chat)
+                .POST("/api/chat/stream", handler::chatStream)
                 .build();
         logger.info("Chat router function registered successfully");
         return router;

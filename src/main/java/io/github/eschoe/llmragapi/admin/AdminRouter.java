@@ -19,6 +19,7 @@ public class AdminRouter {
     RouterFunction<ServerResponse> adminRoutes() {
         return RouterFunctions.route()
                 .GET("/api/admin/vision-usage", handler::getVisionUsage)
+                .GET("/api/admin/metrics", handler::getMetrics)
                 .POST("/api/admin/cache/invalidate", handler::invalidateCache)
                 .build();
     }

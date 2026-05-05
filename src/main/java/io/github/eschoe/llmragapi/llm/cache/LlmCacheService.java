@@ -1,6 +1,7 @@
 package io.github.eschoe.llmragapi.llm.cache;
 
 import io.github.eschoe.llmragapi.common.helper.SimpleDurationParser;
+import io.github.eschoe.llmragapi.common.metrics.MetricsService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
@@ -24,13 +25,16 @@ public class LlmCacheService {
     private final ReactiveStringRedisTemplate redisR;
 
     private final SimpleDurationParser parser;
+    private final MetricsService metrics;
 
     public LlmCacheService(@Qualifier("redisWriterTemplate") ReactiveStringRedisTemplate redisW,
                                @Qualifier("redisReaderTemplate") ReactiveStringRedisTemplate redisR,
-                               SimpleDurationParser parser) {
+                               SimpleDurationParser parser,
+                               MetricsService metrics) {
         this.redisW = redisW;
         this.redisR = redisR;
         this.parser = parser;
+        this.metrics = metrics;
     }
 
     
@@ -79,19 +83,24 @@ public class LlmCacheService {
 
         // 1) 응답 캐시 먼저 시도
         return redisR.opsForValue().get(redisKey)
+                .doOnNext(hit -> metrics.incr("cache_hit").subscribe())
                 .switchIfEmpty(
-                        // 2) 캐시 미스 → 락 시도
-                        redisW.opsForValue().setIfAbsent(lockKey, "1", Duration.ofSeconds(30))
-                                .flatMap(acq -> Boolean.TRUE.equals(acq)
-                                        // 2-1) 락 획득 → 실제 호출 → 캐시 저장 → 락 해제
-                                        ? invoker.get()
-                                        .flatMap(resp -> redisW.opsForValue().set(redisKey, resp, ttlTimes)
-                                                .then(redisW.unlink(lockKey))
-                                                .thenReturn(resp))
-                                        .onErrorResume(e -> redisW.unlink(lockKey).then(Mono.error(e)))
-                                        // 2-2) 락을 못 잡음(다른 요청이 처리 중) → 잠깐 대기 후 캐시 재조회
-                                        : Mono.delay(Duration.ofMillis(120)).then(redisR.opsForValue().get(redisKey))
-                                )
+                        // 2) 캐시 미스 — metric 증가 + 락 시도
+                        Mono.defer(() -> metrics.incr("cache_miss").then(
+                                // TTL 60s — LLM long-tail(gpt-4o 30~50초 가능) 커버.
+                                redisW.opsForValue().setIfAbsent(lockKey, "1", Duration.ofSeconds(60))
+                                        .flatMap(acq -> Boolean.TRUE.equals(acq)
+                                                // 2-1) 락 획득 → 실제 호출 (llm_calls 증가) → 캐시 저장 → 락 해제
+                                                ? metrics.incr("llm_calls")
+                                                        .then(invoker.get())
+                                                        .flatMap(resp -> redisW.opsForValue().set(redisKey, resp, ttlTimes)
+                                                                .then(redisW.unlink(lockKey))
+                                                                .thenReturn(resp))
+                                                        .onErrorResume(e -> redisW.unlink(lockKey).then(Mono.error(e)))
+                                                // 2-2) 락 실패 — 다른 워커 처리 중 → 대기 후 캐시 재조회
+                                                : Mono.delay(Duration.ofMillis(120)).then(redisR.opsForValue().get(redisKey))
+                                        )
+                        ))
                 );
 
     }
