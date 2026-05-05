@@ -116,9 +116,26 @@ public class ChatService {
      *
      * ctxVersion 은 SYSTEM_PROMPT 변경 시 bump 해서 캐시 무효화.
      */
+    /** 사용자 query 최대 길이 — DoS·토큰 비용 폭주 차단. */
+    private static final int MAX_QUERY_CHARS = 4000;
+    /** customPrompt 최대 길이 — system prompt 자리라 더 관대 (8000자). */
+    private static final int MAX_CUSTOM_PROMPT_CHARS = 8000;
+
+    private static void validateInputLength(ChatRequest req) {
+        String q = req.getQuery();
+        if (q != null && q.length() > MAX_QUERY_CHARS) {
+            throw new IllegalArgumentException("query 길이 초과 — 최대 " + MAX_QUERY_CHARS + "자");
+        }
+        String cp = req.getCustomPrompt();
+        if (cp != null && cp.length() > MAX_CUSTOM_PROMPT_CHARS) {
+            throw new IllegalArgumentException("customPrompt 길이 초과 — 최대 " + MAX_CUSTOM_PROMPT_CHARS + "자");
+        }
+    }
+
     public Mono<ChatResponse> chatEnhanced(ChatRequest request) {
 
         Instant startTime = Instant.now();
+        try { validateInputLength(request); } catch (IllegalArgumentException e) { return Mono.error(e); }
 
         String llmQuery = LlmRagUtil.opt(request.getQuery());
         if (llmQuery.isBlank()) return Mono.error(new IllegalArgumentException("query is required"));
@@ -146,28 +163,30 @@ public class ChatService {
         final String partitionId = "global";
         String sessionId = request.getSessionId() != null ? request.getSessionId() : "default-session";
 
-        Mono<List<SearchResult>> searchResultsMono;
+        // 보안: 외부 주입된 searchResults 는 무조건 무시 (멀티테넌시 권한 우회 차단).
+        // 다른 사용자의 청크 ID 를 박아 답변에 포함시키는 시도 방지.
         if (request.getSearchResults() != null && !request.getSearchResults().isEmpty()) {
-            searchResultsMono = Mono.just(request.getSearchResults());
-        } else {
-            // threshold 는 rerank 이후 적용 — 좋은 후보가 cosine 점수 낮다고 잘려나가지 않도록.
-            searchResultsMono = llmClient.embed(embeddingProps.getModel(), llmQuery)
-                    .flatMapMany(embed -> embeddingQueryDao.topKByCosine(embed, candidatePool))
-                    .collectList()
-                    .map(rows -> rows.stream()
-                            .map(r -> new SearchResult(
-                                    String.valueOf(r.getId()),
-                                    r.getContent(),
-                                    r.getScore() != null ? r.getScore() : 0.0,
-                                    Map.of(
-                                            "title", r.getTitle() != null ? r.getTitle() : "",
-                                            "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : "",
-                                            "documentId", r.getDocumentId() != null ? r.getDocumentId() : "",
-                                            "chunkIndex", r.getChunkIndex() != null ? r.getChunkIndex() : 0
-                                    ),
-                                    "database"))
-                            .collect(Collectors.toList()));
+            log.warn("[security] external searchResults ignored (size={}) — server-side retrieval enforced",
+                    request.getSearchResults().size());
         }
+
+        // threshold 는 rerank 이후 적용 — 좋은 후보가 cosine 점수 낮다고 잘려나가지 않도록.
+        Mono<List<SearchResult>> searchResultsMono = llmClient.embed(embeddingProps.getModel(), llmQuery)
+                .flatMapMany(embed -> embeddingQueryDao.topKByCosine(embed, candidatePool))
+                .collectList()
+                .map(rows -> rows.stream()
+                        .map(r -> new SearchResult(
+                                String.valueOf(r.getId()),
+                                r.getContent(),
+                                r.getScore() != null ? r.getScore() : 0.0,
+                                Map.of(
+                                        "title", r.getTitle() != null ? r.getTitle() : "",
+                                        "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : "",
+                                        "documentId", r.getDocumentId() != null ? r.getDocumentId() : "",
+                                        "chunkIndex", r.getChunkIndex() != null ? r.getChunkIndex() : 0
+                                ),
+                                "database"))
+                        .collect(Collectors.toList()));
 
         return searchResultsMono
                 .doOnNext(raw -> log.debug("[RAG] candidate pool: {} rows, scores={}",
@@ -287,6 +306,8 @@ public class ChatService {
      *   data: {"type":"done"}
      */
     public Flux<StreamEvent> chatStream(ChatRequest request) {
+        try { validateInputLength(request); } catch (IllegalArgumentException e) { return Flux.error(e); }
+
         String llmQuery = LlmRagUtil.opt(request.getQuery());
         if (llmQuery.isBlank()) {
             return Flux.error(new IllegalArgumentException("query is required"));

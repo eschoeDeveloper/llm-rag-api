@@ -52,9 +52,20 @@ public class AskService {
     }
 
     
+    /** 입력 길이 한도 — DoS / 토큰 비용 폭주 차단. */
+    private static final int MAX_QUERY_CHARS = 4000;
+    private static final int MAX_CUSTOM_PROMPT_CHARS = 8000;
+
     public Mono<AskResponse> askEnhanced(AskRequest ask) {
 
         Instant startTime = Instant.now();
+
+        if (ask.getQuery() != null && ask.getQuery().length() > MAX_QUERY_CHARS) {
+            return Mono.error(new IllegalArgumentException("query 길이 초과 — 최대 " + MAX_QUERY_CHARS + "자"));
+        }
+        if (ask.getCustomPrompt() != null && ask.getCustomPrompt().length() > MAX_CUSTOM_PROMPT_CHARS) {
+            return Mono.error(new IllegalArgumentException("customPrompt 길이 초과 — 최대 " + MAX_CUSTOM_PROMPT_CHARS + "자"));
+        }
 
         String llmQuery = LlmRagUtil.opt(ask.getQuery());
         if (llmQuery.isBlank()) return Mono.error(new IllegalArgumentException("query is required"));

@@ -2916,3 +2916,234 @@ alt-svc: <filtered>
 2026-05-05 21:25:36.753 DEBUG 1900 --- [reactor-http-nio-9] r.n.http.server.HttpServerOperations     : [9b9d16eb-8, L:/[0:0:0:0:0:0:0:1]:8080 - R:/[0:0:0:0:0:0:0:1]:55084] Decreasing pending responses count: 0
 2026-05-05 21:25:36.753 DEBUG 1900 --- [lettuce-nioEventLoop-7-2] o.s.w.s.adapter.HttpWebHandlerAdapter    : [9b9d16eb-27] Completed 200 OK
 2026-05-05 21:25:36.753 DEBUG 1900 --- [reactor-http-nio-9] r.n.http.server.HttpServerOperations     : [9b9d16eb-8, L:/[0:0:0:0:0:0:0:1]:8080 - R:/[0:0:0:0:0:0:0:1]:55084] Last HTTP packet was sent, terminating the channel
+2026-05-05 21:48:03.782  INFO 29420 --- [main] i.g.e.llmragapi.LlmRagApiApplication     : Starting LlmRagApiApplication using Java 21.0.10 with PID 29420 (D:\workspace\llm-rag-api\build\classes\java\main started by manut in D:\workspace\llm-rag-api)
+2026-05-05 21:48:03.784  INFO 29420 --- [main] i.g.e.llmragapi.LlmRagApiApplication     : The following 1 profile is active: "local"
+2026-05-05 21:48:04.774  INFO 29420 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-05 21:48:04.776  INFO 29420 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data R2DBC repositories in DEFAULT mode.
+2026-05-05 21:48:04.883  INFO 29420 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 101 ms. Found 1 R2DBC repository interface.
+2026-05-05 21:48:04.902  INFO 29420 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-05 21:48:04.903  INFO 29420 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-05-05 21:48:04.917  INFO 29420 --- [main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface io.github.eschoe.llmragapi.rag.retrieval.EmbeddingRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-05 21:48:04.917  INFO 29420 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 6 ms. Found 0 Redis repository interfaces.
+2026-05-05 21:48:05.377  WARN 29420 --- [main] i.g.e.l.common.config.SimpleRedisConfig  : Failed to parse Redis URL — falling back to localhost:6379
+2026-05-05 21:48:05.847  INFO 29420 --- [main] i.github.eschoe.llmragapi.ask.AskRouter  : AskRouter initialized
+2026-05-05 21:48:05.875 DEBUG 29420 --- [main] io.r2dbc.postgresql.Extensions           : Discovering Extensions using ServiceLoader
+2026-05-05 21:48:05.877 DEBUG 29420 --- [main] io.r2dbc.postgresql.Extensions           : Registering extension io.r2dbc.postgresql.codec.BuiltinDynamicCodecs
+2026-05-05 21:48:05.934  INFO 29420 --- [main] i.g.e.l.rag.rerank.RagRerankConfig       : [rerank] Cohere reranker enabled (model=rerank-multilingual-v3.0)
+2026-05-05 21:48:06.327  INFO 29420 --- [main] i.g.eschoe.llmragapi.chat.ChatRouter     : ChatRouter initialized
+2026-05-05 21:48:06.688  INFO 29420 --- [main] i.g.e.l.d.parsing.TesseractDiagnostics   : [parser-init] PDF OCR strategy: AUTO
+2026-05-05 21:48:06.688  INFO 29420 --- [main] i.g.e.l.d.parsing.TesseractDiagnostics   : [parser-init] Tesseract language: kor+eng
+2026-05-05 21:48:06.688  INFO 29420 --- [main] i.g.e.l.d.parsing.TesseractDiagnostics   : [parser-init] TESSDATA_PREFIX env: C:\Program Files\Tesseract-OCR\tessdata
+2026-05-05 21:48:06.713  INFO 29420 --- [main] i.g.e.l.d.parsing.TesseractDiagnostics   : [parser-init] Tesseract OK: tesseract v5.5.0.20241111
+2026-05-05 21:48:06.750  INFO 29420 --- [main] i.g.e.l.d.parsing.TesseractDiagnostics   : [parser-init] Tesseract languages:
+List of available languages in "C:\Program Files\Tesseract-OCR\tessdata/" (161):
+afr
+amh
+ara
+asm
+aze
+aze_cyrl
+bel
+ben
+bod
+bos
+bre
+bul
+cat
+ceb
+ces
+chi_sim
+chi_sim_vert
+chi_tra
+chi_tra_vert
+chr
+cos
+cym
+dan
+deu
+deu_latf
+div
+dzo
+ell
+eng
+enm
+epo
+equ
+est
+eus
+fao
+fas
+fil
+fin
+fra
+frm
+fry
+gla
+gle
+glg
+grc
+guj
+hat
+heb
+hin
+hrv
+hun
+hye
+iku
+ind
+isl
+ita
+ita_old
+jav
+jpn
+jpn_vert
+kan
+kat
+kat_old
+kaz
+khm
+kir
+kmr
+kor
+lao
+lat
+lav
+lit
+ltz
+mal
+mar
+mkd
+mlt
+mon
+mri
+msa
+mya
+nep
+nld
+nor
+oci
+ori
+osd
+pan
+pol
+por
+pus
+que
+ron
+rus
+san
+script\Arabic
+script\Armenian
+script\Bengali
+script\Canadian_Aboriginal
+script\Cherokee
+script\Cyrillic
+script\Devanagari
+script\Ethiopic
+script\Fraktur
+script\Georgian
+script\Greek
+script\Gujarati
+script\Gurmukhi
+script\HanS
+script\HanS_vert
+script\HanT
+script\HanT_vert
+script\Hangul
+script\Hangul_vert
+script\Hebrew
+script\Japanese
+script\Japanese_vert
+script\Kannada
+script\Khmer
+script\Lao
+script\Latin
+script\Malayalam
+script\Myanmar
+script\Oriya
+script\Sinhala
+script\Syriac
+script\Tamil
+script\Telugu
+script\Thaana
+script\Thai
+script\Tibetan
+script\Vietnamese
+sin
+slk
+slv
+snd
+spa
+spa_old
+sqi
+srp
+srp_latn
+sun
+swa
+swe
+syr
+tam
+tat
+tel
+tgk
+tha
+tir
+ton
+tur
+uig
+ukr
+urd
+uzb
+uzb_cyrl
+vie
+yid
+yor
+2026-05-05 21:48:06.777  INFO 29420 --- [main] i.github.eschoe.llmragapi.ask.AskRouter  : === REGISTERING ASK ROUTER ===
+2026-05-05 21:48:06.777  INFO 29420 --- [main] i.github.eschoe.llmragapi.ask.AskRouter  : Route: POST /api/ask
+2026-05-05 21:48:06.777  INFO 29420 --- [main] i.github.eschoe.llmragapi.ask.AskRouter  : Ask router function registered successfully
+2026-05-05 21:48:06.778  INFO 29420 --- [main] i.g.eschoe.llmragapi.chat.ChatRouter     : === REGISTERING CHAT ROUTER ===
+2026-05-05 21:48:06.778  INFO 29420 --- [main] i.g.eschoe.llmragapi.chat.ChatRouter     : Route: POST /api/chat
+2026-05-05 21:48:06.778  INFO 29420 --- [main] i.g.eschoe.llmragapi.chat.ChatRouter     : Chat router function registered successfully
+2026-05-05 21:48:06.795  INFO 29420 --- [main] ctiveUserDetailsServiceAutoConfiguration : 
+
+Using generated security password: bc8d299c-3298-43e8-ae14-92e14135dd43
+
+2026-05-05 21:48:06.873  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : === CORS WEBSITE FILTER CONFIGURATION ===
+2026-05-05 21:48:06.873  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : Allowed Origins: http://localhost:3000
+2026-05-05 21:48:06.873  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : Allowed Methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+2026-05-05 21:48:06.874  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : Allowed Headers: *
+2026-05-05 21:48:06.874  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : Allow Credentials: true
+2026-05-05 21:48:06.874  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : Using allowedOrigins: [http://localhost:3000]
+2026-05-05 21:48:06.874  INFO 29420 --- [main] i.g.e.l.common.config.WebFluxConfig      : CorsWebFilter bean created successfully
+2026-05-05 21:48:06.907 DEBUG 29420 --- [main] o.s.w.r.f.s.s.RouterFunctionMapping      : 8 RouterFunction(s) in 'routerFunctionMapping'
+2026-05-05 21:48:06.915 DEBUG 29420 --- [main] o.s.w.r.handler.SimpleUrlHandlerMapping  : Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+2026-05-05 21:48:07.010  INFO 29420 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 4 endpoints beneath base path '/actuator'
+2026-05-05 21:48:07.046 DEBUG 29420 --- [main] o.s.w.r.r.m.a.ControllerMethodResolver   : ControllerAdvice beans: none
+2026-05-05 21:48:07.065 DEBUG 29420 --- [main] o.s.w.s.adapter.HttpWebHandlerAdapter    : enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2026-05-05 21:48:07.483  INFO 29420 --- [main] o.s.b.web.embedded.netty.NettyWebServer  : Netty started on port 8080 (http)
+2026-05-05 21:48:07.496  INFO 29420 --- [main] i.g.e.llmragapi.LlmRagApiApplication     : Started LlmRagApiApplication in 4.262 seconds (process running for 4.629)
+2026-05-05 21:52:55.462 DEBUG 29420 --- [reactor-http-nio-2] r.n.http.server.HttpServerOperations     : [a467a8cd, L:/175.197.74.129:8080 - R:/185.91.127.85:51720] New http connection, requesting read
+2026-05-05 21:52:55.462 DEBUG 29420 --- [reactor-http-nio-4] r.n.http.server.HttpServerOperations     : [5b20ddda, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] New http connection, requesting read
+2026-05-05 21:52:55.462 DEBUG 29420 --- [reactor-http-nio-5] r.n.http.server.HttpServerOperations     : [6b99e7c2, L:/175.197.74.129:8080 - R:/185.91.127.85:51730] New http connection, requesting read
+2026-05-05 21:52:55.462 DEBUG 29420 --- [reactor-http-nio-3] r.n.http.server.HttpServerOperations     : [250c9675, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] New http connection, requesting read
+2026-05-05 21:52:55.488 DEBUG 29420 --- [reactor-http-nio-4] r.n.http.server.HttpServerOperations     : [5b20ddda, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] Increasing pending responses count: 1
+2026-05-05 21:52:55.488 DEBUG 29420 --- [reactor-http-nio-3] r.n.http.server.HttpServerOperations     : [250c9675, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] Increasing pending responses count: 1
+2026-05-05 21:52:55.495 DEBUG 29420 --- [reactor-http-nio-3] reactor.netty.http.server.HttpServer     : [250c9675-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] Handler is being applied: org.springframework.http.server.reactive.ReactorHttpHandlerAdapter@740df3e9
+2026-05-05 21:52:55.495 DEBUG 29420 --- [reactor-http-nio-4] reactor.netty.http.server.HttpServer     : [5b20ddda-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] Handler is being applied: org.springframework.http.server.reactive.ReactorHttpHandlerAdapter@740df3e9
+2026-05-05 21:52:55.506 DEBUG 29420 --- [reactor-http-nio-4] o.s.w.s.adapter.HttpWebHandlerAdapter    : [5b20ddda-1] HTTP CONNECT ""
+2026-05-05 21:52:55.507 DEBUG 29420 --- [reactor-http-nio-3] o.s.w.s.adapter.HttpWebHandlerAdapter    : [250c9675-2] HTTP CONNECT ""
+2026-05-05 21:52:55.535 DEBUG 29420 --- [reactor-http-nio-3] o.s.w.s.adapter.HttpWebHandlerAdapter    : [250c9675-2] Completed 400 BAD_REQUEST
+2026-05-05 21:52:55.536 DEBUG 29420 --- [reactor-http-nio-4] o.s.w.s.adapter.HttpWebHandlerAdapter    : [5b20ddda-1] Completed 400 BAD_REQUEST
+2026-05-05 21:52:55.553 DEBUG 29420 --- [reactor-http-nio-4] r.n.http.server.HttpServerOperations     : [5b20ddda-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] Last HTTP response frame
+2026-05-05 21:52:55.553 DEBUG 29420 --- [reactor-http-nio-4] r.n.http.server.HttpServerOperations     : [5b20ddda-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] Headers are not sent before onComplete().
+2026-05-05 21:52:55.553 DEBUG 29420 --- [reactor-http-nio-3] r.n.http.server.HttpServerOperations     : [250c9675-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] Last HTTP response frame
+2026-05-05 21:52:55.553 DEBUG 29420 --- [reactor-http-nio-3] r.n.http.server.HttpServerOperations     : [250c9675-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] Headers are not sent before onComplete().
+2026-05-05 21:52:55.555 DEBUG 29420 --- [reactor-http-nio-3] r.n.http.server.HttpServerOperations     : [250c9675-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] Decreasing pending responses count: 0
+2026-05-05 21:52:55.555 DEBUG 29420 --- [reactor-http-nio-4] r.n.http.server.HttpServerOperations     : [5b20ddda-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] Decreasing pending responses count: 0
+2026-05-05 21:52:55.556 DEBUG 29420 --- [reactor-http-nio-4] r.n.http.server.HttpServerOperations     : [5b20ddda-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51716] Last HTTP packet was sent, terminating the channel
+2026-05-05 21:52:55.557 DEBUG 29420 --- [reactor-http-nio-3] r.n.http.server.HttpServerOperations     : [250c9675-1, L:/175.197.74.129:8080 - R:/185.91.127.85:51742] Last HTTP packet was sent, terminating the channel
+2026-05-05 21:56:23.852 DEBUG 29420 --- [reactor-http-nio-6] r.n.http.server.HttpServerOperations     : [c4f2c376, L:/[0:0:0:0:0:0:0:1]:8080 - R:/[0:0:0:0:0:0:0:1]:52629] New http connection, requesting read
+2026-05-05 21:56:23.855 DEBUG 29420 --- [reactor-http-nio-6] r.n.http.server.HttpServerOperations     : [c4f2c376, L:/[0:0:0:0:0:0:0:1]:8080 - R:/[0:0:0:0:0:0:0:1]:52629] Increasing pending responses count: 1
+2026-05-05 21:56:23.856 DEBUG 29420 --- [reactor-http-nio-6] reactor.netty.http.server.HttpServer     : [c4f2c376-1, L:/[0:0:0:0:0:0:0:1]:8080 - R:/[0:0:0:0:0:0:0:1]:52629] Handler is being applied: org.springframework.http.server.reactive.ReactorHttpHandlerAdapter@740df3e9
+2026-05-05 21:56:23.857 DEBUG 29420 --- [reactor-http-nio-6] o.s.w.s.adapter.HttpWebHandlerAdapter    : [c4f2c376-3] HTTP GET "/api/admin/metrics"
+2026-05-05 21:56:23.893 DEBUG 29420 --- [parallel-2] o.s.w.s.s.DefaultWebSessionManager       : Created new WebSession.
