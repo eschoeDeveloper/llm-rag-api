@@ -12,7 +12,6 @@ import java.util.Map;
 
 /**
  * 프롬프트/대화 이력 메시지를 JSON 직렬화하는 공용 헬퍼.
- *
  * 이전에 ChatService, AskService 양쪽에 똑같은 toPromptJson/toMessageJson 가 중복돼 있었다.
  * 한 곳으로 통합 — 변경 시 한 군데만 고치면 됨.
  */

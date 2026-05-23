@@ -15,18 +15,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Cohere Rerank API 기반 Reranker.
  * 멀티링구얼 모델 사용 — 한국어 쿼리/문서 모두 지원.
- *
  * 호출 비용 (rerank-multilingual-v3.0): 1,000건당 $1
  *  - 한 RAG 호출 = 1건 (문서 N개 한 번에 평가)
  *  - 즉 1,000번 채팅 = $1
- *
  * 호출 실패 시 입력 그대로 반환해 fallback (RAG 끊기지 않음).
- *
  * 활성 조건: COHERE_API_KEY env 또는 spring.ai.cohere.api-key 프로퍼티 설정.
  */
 public class CohereReranker implements Reranker {
@@ -46,13 +42,11 @@ public class CohereReranker implements Reranker {
 
     /**
      * Cohere /v2/rerank API 호출 → 재정렬된 결과 반환.
-     *
      * 핵심 동작:
      *  - 1~0 후보면 호출 생략 (재정렬할 게 없음)
      *  - return_documents=false 로 응답 크기 최소화 (인덱스만 받아서 원본 매핑)
      *  - 10초 timeout 후 자동 NoOp fallback — RAG 흐름은 깨지지 않음
      *  - 점수 desc 정렬은 Cohere 가 보장하지만 명시적으로 한 번 더 sort
-     *
      * 점수 분포 차이 주의:
      *  - vector cosine: 0~1, 보통 0.4~0.7 대역
      *  - Cohere relevance_score: 0~1, 보통 0.5~0.95 대역 (분포 다름)
@@ -65,7 +59,7 @@ public class CohereReranker implements Reranker {
 
         List<String> documents = candidates.stream()
                 .map(SearchResult::getContent)
-                .collect(Collectors.toList());
+                .toList();
 
         Map<String, Object> body = Map.of(
                 "model", model,
@@ -115,7 +109,7 @@ public class CohereReranker implements Reranker {
         reranked.sort(Comparator.comparingDouble(SearchResult::getScore).reversed());
         log.debug("[rerank] Cohere reranked {} -> {} items, top score {}",
                 candidates.size(), reranked.size(),
-                reranked.isEmpty() ? "n/a" : String.format("%.3f", reranked.get(0).getScore()));
+                reranked.isEmpty() ? "n/a" : String.format("%.3f", reranked.getFirst().getScore()));
         return reranked;
     }
 }

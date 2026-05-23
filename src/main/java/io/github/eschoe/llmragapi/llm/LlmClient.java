@@ -46,7 +46,6 @@ public class LlmClient {
 
     /**
      * OpenAI Embeddings API 호출.
-     *
      * 차원 검증 강제:
      *   - 응답 임베딩 차원이 EmbeddingProperties.expectedDim 과 다르면 IllegalStateException.
      *   - 모델 변경(text-embedding-3-small 1536 → text-embedding-3-large 3072) 시
@@ -130,15 +129,12 @@ public class LlmClient {
 
     /**
      * OpenAI Chat Streaming — 토큰 단위로 delta content 만 emit.
-     *
      * 응답 형식 (SSE):
      *   data: {"choices":[{"delta":{"content":"Hello"}}]}
      *   data: {"choices":[{"delta":{"content":" world"}}]}
      *   data: [DONE]
-     *
      * Spring WebClient 의 bodyToFlux(String) 는 SSE 의 data: 부분만 추출해서 line 단위 emit.
      * [DONE] sentinel 도달 시 stream 종료.
-     *
      * 현재 OpenAI 만 지원. Anthropic streaming 은 다른 SSE 포맷이라 추후 별도 구현.
      */
     public Flux<String> streamChat(String provider, String model, String system, String user) {
@@ -171,7 +167,7 @@ public class LlmClient {
             Map<?, ?> m = objectMapper.readValue(json, Map.class);
             Object raw = m.get("choices");
             if (!(raw instanceof List<?> choices) || choices.isEmpty()) return null;
-            Object first = choices.get(0);
+            Object first = choices.getFirst();
             if (!(first instanceof Map<?, ?> firstMap)) return null;
             Object deltaObj = firstMap.get("delta");
             if (!(deltaObj instanceof Map<?, ?> delta)) return null;

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 응답 캐시 자동 청소.
- *
  * 트리거:
  *  - 매일 새벽 4시 (cron) — 운영 트래픽 적은 시간
  *  - 활성/비활성 토글: app.llm.cache.cleanup-enabled

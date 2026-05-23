@@ -54,18 +54,15 @@ public class DocumentUploadService {
 
     /**
      * 문서 업로드 풀 흐름.
-     *
      * 단계:
      *   1. {@link DocumentParsingService} — 텍스트 추출 (Tika/OCR/Vision 자동 라우팅)
      *   2. {@link Chunker} — 단락→문장→글자 폴백 청킹
      *   3. {@link ChunkEmbedder} — 청크별 임베딩 + DB 저장
      *   4. {@link DocumentMetadataStore} — Redis 에 메타 저장 (30일 TTL)
      *   5. {@link LlmCacheService} 응답 캐시 무효화 — 새 문서 추가됐으니 stale 답변 제거
-     *
      * 실패 처리 (onErrorResume):
      *   - 어느 단계든 실패 시 status=FAILED, errors=[원인] 응답
      *   - 핸들러가 422 로 변환해 프론트에 명확한 에러 표시
-     *
      * 비용 의식적 경로:
      *   - Vision 사용 시 VisionUsageTracker 가 일일 한도 enforcement
      *   - 한도 초과면 1단계에서 즉시 실패 → 임베딩 호출까지 안 감

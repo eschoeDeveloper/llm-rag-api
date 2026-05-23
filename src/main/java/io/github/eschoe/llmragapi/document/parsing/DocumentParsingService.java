@@ -20,7 +20,6 @@ import java.util.List;
 
 /**
  * 문서 → 텍스트 추출 오케스트레이터.
- *
  * 라우팅 결정만 담당:
  *  - PDF + image-only + visionFallback 활성 → {@link VisionPdfExtractor}
  *  - 그 외 → Tika {@link AutoDetectParser}
@@ -63,13 +62,11 @@ public class DocumentParsingService {
 
     /**
      * 입력 파일 → 텍스트 추출. 라우팅 결정만 담당.
-     *
      * 라우팅 우선순위:
      *   1. visionFallback 활성 + PDF + 페이지당 글자 수 < threshold → Vision (GPT-4o)
      *      (image-only PDF — Tika OCR 보다 멀티모달 LLM 이 한국어/표 인식 정확)
      *   2. 그 외 모두 → Tika AutoDetectParser
      *      (텍스트 PDF, PPTX, DOCX, XLSX, TXT, MD, HTML 등)
-     *
      * Vision 경로는 별도 Mono — Tika 호출 안 함 (이미 Vision 으로 충분).
      * Tika 경로는 내부에서 다시 OCR strategy 에 따라 Tesseract OCR 가능.
      */

@@ -20,21 +20,16 @@ public class EmbeddingQueryDao {
 
     /**
      * pgvector cosine 유사도 기준 top-K 검색.
-     *
      * 쿼리:
      *   ORDER BY embedding <=> :queryVector::vector LIMIT :limit
-     *
      * pgvector 연산자:
      *   <=> = cosine distance (0 = 동일, 1 = 직교)
      *   <-> = L2 distance
      *   <#> = negative inner product
-     *
      * score = 1 - cosine_distance = cosine_similarity (0~1, 높을수록 유사).
-     *
      * 보안:
      *   - 벡터를 String.format 으로 SQL 에 직접 보간하지 않음 (이전 버전 SQL injection 위험 있었음)
      *   - :queryVector 바인드 후 ::vector 캐스트 — pgvector 는 string→vector 캐스트 지원
-     *
      * 인덱스:
      *   - V2 마이그레이션에서 hnsw (vector_cosine_ops) 인덱스 추가
      *   - 데이터 많을 때 풀 스캔 대비 ×100 빠름

@@ -13,7 +13,6 @@ import java.util.List;
 
 /**
  * 검색 결과를 LLM 프롬프트에 넣기 전에 토큰 예산 내로 잘라낸다.
- *
  * jtokkit 의 {@code o200k_base} 인코더 사용 (gpt-4o, gpt-4o-mini 와 동일).
  * cl100k 보다 한국어 토큰 효율이 살짝 좋다 — gpt-4o 환경 기준.
  */
@@ -49,13 +48,10 @@ public class ContextBudget {
 
     /**
      * maxTokens 안에 들어가도록 candidates 를 위에서부터 채워 넣는다.
-     *
      * 그리디 전략 — 첫 번째 청크가 budget 초과면 그 자리에서 멈춘다.
      * (나중 청크가 더 작아도 시도하지 않음. score 순서 보존이 더 중요.)
-     *
      * 이유: rerank 로 score desc 정렬된 상태라 위쪽이 더 중요한 청크.
      * 큰 청크 하나 버리고 작은 거 여러 개 쑤셔 넣으면 답변 품질이 떨어짐.
-     *
      * Edge case: 첫 청크 자체가 예산을 초과하면 빈 결과 대신 truncate 해서라도 1개는 보존.
      * 빈 결과 → "관련 컨텍스트를 찾지 못했습니다" 메시지로 떨어져 사용자가 정상 답변을 못 받음.
      * 일부라도 있는 게 무 반환보다 답변 품질에 도움.
@@ -95,7 +91,7 @@ public class ContextBudget {
             String m = messages.get(i);
             int cost = estimateTokens(m);
             if (used + cost > maxTokens) break;
-            kept.add(0, m);
+            kept.addFirst(m);
             used += cost;
         }
         return kept;
