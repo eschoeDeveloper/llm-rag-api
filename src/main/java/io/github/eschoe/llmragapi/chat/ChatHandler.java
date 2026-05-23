@@ -72,43 +72,19 @@ public class ChatHandler {
     
     private Mono<ServerResponse> processChatRequest(String body, String sessionId) {
         try {
-            // JSON 파싱 시도
             ChatRequest chatRequest = objectMapper.readValue(body, ChatRequest.class);
 
-            // 세션 ID 설정
-            if (chatRequest.getSessionId() != null && sessionUtil.isValidSessionId(chatRequest.getSessionId())) {
-                chatRequest.setSessionId(chatRequest.getSessionId());
-            } else {
-                chatRequest.setSessionId(sessionId);
-            }
-
-            // 새로운 방식인지 확인 (config가 있으면 새로운 방식)
-            if (chatRequest.getConfig() != null) {
-                return chatService.chatEnhanced(chatRequest)
-                        .flatMap(response -> ServerResponse.ok()
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .header("X-Session-ID", chatRequest.getSessionId())
-                                .bodyValue(response));
-            }
-        } catch (Exception e) {
-            // JSON 파싱 실패 시 기존 방식으로 시도
-        }
-
-        try {
-            // 기존 방식으로 파싱 시도
-            ChatBody chatBody = objectMapper.readValue(body, ChatBody.class);
-            
-            // ChatBody를 ChatRequest로 변환하여 컨텍스트 유지 기능 사용
-            ChatRequest chatRequest = new ChatRequest();
-            chatRequest.setQuery(chatBody.query());
+            // sessionId — 헤더 값으로 통일 (body 의 sessionId 는 무시해 spoofing 차단)
             chatRequest.setSessionId(sessionId);
-            
-            // 기본 config 설정
-            RAGConfig defaultConfig = new RAGConfig();
-            defaultConfig.setTopK(5);
-            defaultConfig.setThreshold(0.7);
-            chatRequest.setConfig(defaultConfig);
-            
+
+            // config 누락 시 기본값 보충
+            if (chatRequest.getConfig() == null) {
+                RAGConfig defaultConfig = new RAGConfig();
+                defaultConfig.setTopK(5);
+                defaultConfig.setThreshold(0.1);
+                chatRequest.setConfig(defaultConfig);
+            }
+
             return chatService.chatEnhanced(chatRequest)
                     .flatMap(response -> ServerResponse.ok()
                             .contentType(MediaType.APPLICATION_JSON)
@@ -118,10 +94,10 @@ public class ChatHandler {
             return ServerResponse.badRequest()
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(new DetailedErrorResponse(
-                        "INVALID_REQUEST_FORMAT",
-                        "요청 형식이 올바르지 않습니다.",
-                        "JSON 파싱 오류: " + e.getMessage(),
-                        sessionId
+                            "INVALID_REQUEST_FORMAT",
+                            "요청 형식이 올바르지 않습니다.",
+                            "JSON 파싱 오류: " + e.getMessage(),
+                            sessionId
                     ));
         }
     }

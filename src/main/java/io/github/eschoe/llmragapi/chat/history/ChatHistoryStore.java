@@ -16,10 +16,8 @@ import java.util.Map;
 
 /**
  * 사용자 세션별 대화 이력 저장.
- *
  * Redis 키:
  *   chat:hist:{sessionId}  → JSON 메시지 list (LPUSH 로 최신이 head, LTRIM 으로 max 유지)
- *
  * 메시지 형식: {"role": "user|assistant", "content": "...", "timestamp": "ISO-8601"}
  * (PromptSerializer.toMessageJson 으로 직렬화)
  */
@@ -86,7 +84,6 @@ public class ChatHistoryStore {
      * 사람이 읽기 쉬운 형식으로 포맷:
      *   사용자: 안녕
      *   AI: 안녕하세요
-     *
      * Jackson 으로 role/content 추출. 파싱 실패 시 raw 메시지 그대로 표시.
      */
     public Mono<String> getFormattedHistory(String sessionId, long limit) {
