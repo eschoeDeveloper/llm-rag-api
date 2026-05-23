@@ -14,13 +14,16 @@ import reactor.core.publisher.Mono;
 public class ConversationThreadHandler {
 
     private final ConversationThreadService threadService;
+    private final ThreadChatOrchestrator chatOrchestrator;
     private final ObjectMapper objectMapper;
     private final SessionUtil sessionUtil;
 
-    public ConversationThreadHandler(ConversationThreadService threadService, 
-                                   ObjectMapper objectMapper, 
-                                   SessionUtil sessionUtil) {
+    public ConversationThreadHandler(ConversationThreadService threadService,
+                                     ThreadChatOrchestrator chatOrchestrator,
+                                     ObjectMapper objectMapper,
+                                     SessionUtil sessionUtil) {
         this.threadService = threadService;
+        this.chatOrchestrator = chatOrchestrator;
         this.objectMapper = objectMapper;
         this.sessionUtil = sessionUtil;
     }
@@ -126,7 +129,7 @@ public class ConversationThreadHandler {
                     try {
                         ThreadChatRequest chatRequest = objectMapper.readValue(body, ThreadChatRequest.class);
 
-                        return threadService.threadChat(
+                        return chatOrchestrator.threadChat(
                                         threadId,
                                         chatRequest.getQuery(),
                                         chatRequest.getMode(),
