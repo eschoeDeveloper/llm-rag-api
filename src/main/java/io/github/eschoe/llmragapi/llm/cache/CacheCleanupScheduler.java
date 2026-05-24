@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+
 /**
  * 응답 캐시 자동 청소.
  * 트리거:
@@ -40,7 +42,8 @@ public class CacheCleanupScheduler {
         try {
             // @Scheduled 는 자체 ThreadPoolTaskScheduler 에서 실행 — Reactor 이벤트 루프 아님 → block() 안전.
             // subscribe() 만 던지면 fire-and-forget 이라 결과/에러 추적 불가 + 디스포저블 누수.
-            Long deleted = cache.invalidateAnswers().block();
+            // Redis 응답 지연 시 무한 대기 → dyno 재시작과 겹치면 graceful shutdown 지연. 30s timeout 으로 방어.
+            Long deleted = cache.invalidateAnswers().block(Duration.ofSeconds(30));
             log.info("[cache-cleanup] removed {} answer cache keys", deleted == null ? 0 : deleted);
         } catch (Exception e) {
             log.warn("[cache-cleanup] failed: {}", e.getMessage());
