@@ -15,6 +15,8 @@ public class ConversationThreadRouter {
         return route()
                 // 스레드 생성
                 .POST("/api/threads", handler::createThread)
+                // 익명 세션 히스토리 → 새 스레드 복원
+                .POST("/api/threads/from-history", handler::restoreFromHistory)
                 // 사용자 스레드 목록 조회
                 .GET("/api/threads", handler::getUserThreads)
                 // 특정 스레드 조회

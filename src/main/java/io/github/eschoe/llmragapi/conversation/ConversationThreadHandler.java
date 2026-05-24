@@ -10,20 +10,25 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
 @Component
 public class ConversationThreadHandler {
 
     private final ConversationThreadService threadService;
     private final ThreadChatOrchestrator chatOrchestrator;
+    private final ThreadHistoryRestorer historyRestorer;
     private final ObjectMapper objectMapper;
     private final SessionUtil sessionUtil;
 
     public ConversationThreadHandler(ConversationThreadService threadService,
                                      ThreadChatOrchestrator chatOrchestrator,
+                                     ThreadHistoryRestorer historyRestorer,
                                      ObjectMapper objectMapper,
                                      SessionUtil sessionUtil) {
         this.threadService = threadService;
         this.chatOrchestrator = chatOrchestrator;
+        this.historyRestorer = historyRestorer;
         this.objectMapper = objectMapper;
         this.sessionUtil = sessionUtil;
     }
@@ -156,6 +161,30 @@ public class ConversationThreadHandler {
                                 .bodyValue(new DetailedErrorResponse(
                                         "THREAD_NOT_FOUND",
                                         "대화 스레드를 찾을 수 없습니다.",
+                                        error.getMessage(),
+                                        sessionId
+                                )));
+    }
+
+    /**
+     * 익명 세션의 채팅 히스토리(Redis)를 새 스레드로 복원.
+     * sessionId 만으로 채팅하다 영속 스레드로 전환할 때 사용. threadId 는 서버가 생성.
+     */
+    public Mono<ServerResponse> restoreFromHistory(ServerRequest request) {
+        final String sessionId = sessionUtil.extractSessionId(request);
+        final String threadId = UUID.randomUUID().toString();
+
+        return historyRestorer.loadThreadFromHistory(threadId, sessionId)
+                .flatMap(thread -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Session-ID", sessionId)
+                        .bodyValue(thread))
+                .onErrorResume(RuntimeException.class, error ->
+                        ServerResponse.status(500)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(new DetailedErrorResponse(
+                                        "HISTORY_RESTORE_ERROR",
+                                        "히스토리에서 스레드를 복원하지 못했습니다.",
                                         error.getMessage(),
                                         sessionId
                                 )));
